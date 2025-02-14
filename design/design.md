@@ -1,15 +1,13 @@
-Purpose
+## Purpose
 The purpose of this language is to easily generate graphical representations of fractals with low mathematical overhead. Through this, it allows users to be able to understand the behaviour of different types of fractals in a simple yet familiar form factor. Users will be able to define fractals in simple syntax that is similar to the commonly used notation for escape-time and iterative fractals. They will also have control over the coloring method of the fractal, and once rendered will be able to move around, zoom in, and alter the degree of precision/level of iteration that the fractal is currently being rendered at.
-Concepts
-There are two kinds of fractals that we will be representing within our language - escape-time fractals and iterative fractals. Both kinds of fractals have static properties that can be measured, such as the Hausdorff dimension, a specific measure of fractal dimension.
-Escape-time fractals are those where a mathematical function is repeatedly applied to every point within a certain bounds, to test whether the value of the function “escapes” the bounds. Points for which the repeated application of the function does not escape are included within the fractal. Escape-time fractals are usually generated on the complex plane, allowing for simpler equations using complex numbers instead of points. 
-Iterative fractals are any fractals that are created by repeatedly iterating a pattern. While escape-time fractals fall under this definition, most iterative patterns are better represented by a set of states and transformations, leading to a different grammar within our language that utilizes L-Systems. 
-Language Grammar
-```
+## Concepts
+There are two kinds of fractals that we will be representing within our language - escape-time fractals and iterative fractals. Both kinds of fractals have static properties that can be measured, such as the Hausdorff dimension, a specific measure of fractal dimension. Other measurements include the packing dimension, information dimension, and correlation dimension. Many of these measures are equivalent for most fractals, so which ones are to be included will be finalized by the first milestone. \
+Escape-time fractals are those where a mathematical function is repeatedly applied to every point within a certain bounds, to test whether the value of the function “escapes” the bounds. Points for which the repeated application of the function does not escape are included within the fractal. Escape-time fractals are usually generated on the complex plane, allowing for simpler equations using complex numbers instead of points. \
+Iterative fractals are any fractals that are created by repeatedly iterating a pattern. While escape-time fractals fall under this definition, most iterative patterns are better represented by a set of states and transformations, leading to a different grammar within our language that utilizes L-Systems. L-Systems are a type of grammar that allows us to define an alphabet of bindings to commands, and transformations to apply to each variable in the state at each iteration.
+## Language Grammar
+```lisp
 ; generate-etfractal : (-> (-> Complex Complex Complex) Complex [Bounds Bounds] ETFractal)
-; Creates an escape-time fractal based on a function of two complex values (z and c, where z is the value
-; of the last iteration of the function and c is the point being tested), a complex value for z0, and a certain
-; bounds that is used to determine if the value of the function has “escaped”
+; Creates an escape-time fractal based on a function of two complex values (z and c, where z is the value of the last iteration of the function and c is the point being tested), a complex value for z0, and a certain bounds that is used to determine if the value of the function has “escaped”
 
 ; (bounds Complex Complex)
 (define-struct bounds [upper lower])
@@ -25,11 +23,11 @@ Language Grammar
 ; Will determine the number of steps to escape for some point on the complex plane. Errors if the given point does not escape.
 
 ; <Color-ETF> := #:color-func (-> Complex Color)
-;                         | #:color-func (-> Complex ETFractal Color)
-;                         | #:color-gradient (list Color)
+;              | #:color-func (-> Complex ETFractal Color)
+;              | #:color-gradient (list Color)
 
 ; render : (-> ETFractal <Color-ETF> [Bounds Bounds] PosInt PosInt [Bounds Bounds])
-; Will render an escape time fractal, using the provided means of coloring (either a function that determines the color of each point, or a list of colors to use as a gradient depending on the speed of escape),.. Returns the final bounds of the window.
+; Will render an escape time fractal, using the provided means of coloring (either a function that determines the color of each point, or a list of colors to use as a gradient depending on the speed of escape), within the given bounds and window size. Returns the final bounds being used to view the fractal.
 
 ; generate-ifractal : -> <L-System> Number IFractal
 ; Creates an iterative fractal based on a provided L-System, initialized to the provided iteration of the fractal.
@@ -38,12 +36,10 @@ Language Grammar
 ; An L system is used to represent iterative fractals. The bindings define all possible commands for this L-System. These bindings are then used to define the initial state of the system, and the transformations to apply at each iteration. If a binding has no defined transformation, the default transformation simply preserves it within the State.
 
 ; <Binding> := [<id>: <command>]
-; A <command> is one of or a composition of commands from a yet to be defined list of actions,
-; including moving forward, drawing forward, rotating, saving the current location, returning to a
-; location, and more as we define the need for them
+; A <command> is one of or a composition of commands from a yet to be defined list of actions, including moving forward, drawing forward, rotating, saving the current location, returning to a location, and more as we define the need for them
 
 ; <State> := <id>
-;      	| <id><State>
+;          | <id><State>
 ; The state is represented by a contiguous set of identifiers that have no space between them. These identifiers are associated with some transformation of the graphical representation of the fractal. If there is an identifier that does not exist, then a syntax error will be raised.
 
 ; <Transformation> := [<State> -> <State>]
@@ -57,20 +53,58 @@ Language Grammar
 
 ; render : (-> IFractal Natural PosInt PosInt Natural)
 ; Will render some iterative fractal with some number of iterations applied to the fractal and some bounds of the window and will return the number of iterations so far.
-
+```
 
 Note: Some of the signatures above (notably generate-etfractal and generate-ifractal) are likely to change by our first milestone to incorporate a representation of Space, indicating whether the fractal is to be viewed in 2 or 3 dimensions, and which system of measurement to use (currently defaulting to the complex plane, as it is the standard, but should allow for rectangular and spherical coordinates as well.)
 
-```
-Milestones
+## Milestones
 Below are the milestones for this project:
-02/16/25: Solidify the syntax and semantics of our DSL
-While we have determined our goal and the concepts that lay within it, certain implementation details still need to be finalized. This includes which other properties besides the Hausdorff dimension to include (since many are mostly equivalent), whether our L-Systems should be context-free (transformations only operate on a single binding at a time vs allowing a pattern of bindings to have a unique transformation), and commands to include for our L-Systems.
-02/23/25: Implement the runtime of the functionality of escape time fractals
-03/02/25: Implement the runtime of the functionality of iterative fractals
-03/09/25: Add the compile time macros of the DSL to enable for two dimensional fractals to be generated
-03/13/25: Ensure reasonable error messages for the language
-04/06/25: Add runtime support for three dimensional rendering of fractals for both escape time and iterative fractals
-04/13/25: Extend the language syntax to allow for three dimensional fractal generation 
+- 02/16/25: Solidify the syntax and semantics of our DSL \
+    - While we have determined our goal and the concepts that lay within it, certain implementation details still need to be finalized. This includes which other properties besides the Hausdorff dimension to include (since many are mostly equivalent), whether our L-Systems should be context-free (transformations only operate on a single binding at a time vs allowing a pattern of bindings to have a unique transformation), and commands to include for our L-Systems.
+- 02/23/25: Implement the runtime of the functionality of escape time fractals
+- 03/02/25: Implement the runtime of the functionality of iterative fractals
+- 03/09/25: Add the compile time macros of the DSL to enable for two dimensional fractals to be generated using standard notations.
+- 03/13/25: Ensure reasonable error messages for the language and language smoothly extends to three dimensions
+    - If needed, this is the point by which we will make sure the grammar of the language is easily translatable into three dimensions. The main feature that we may need to edit is our assumptions on Space, as while the complex plane is standard to use in two dimensions, there is no analagous representation in three dimensions.
+- 04/06/25: Add runtime support for three dimensional rendering of fractals for both escape time and iterative fractals
+- 04/13/25: Extend the language syntax to allow for three dimensional fractal generation using standard notations
 
-Example Programs
+
+## Example Programs
+
+Example escape-time fractal program to generate the mandelbrot set:
+```lisp
+(define mand-upd (λ (z c) (+ (sqr z) c)))
+
+(define mandelbrot (generate-etfractal mand-upd 0 2 2D))
+
+
+(hausdorff-dim mandelbrot) ; returns 2
+(point-in-set? mandelbrot 0) ; returns #t
+(point-in-set? mandelbrot (+ 5 7i)) ; returns #f
+
+(define mand-color (lambda (c etf)
+                     (cond [(point-in-set? etf c) "black"]
+                           [(< 5 (steps-to-escape etf c)) "blue"]
+                           [else "light blue"])))
+
+(render mandelbrot mand-color [(bounds -2 2) (bounds -2i 2i)] 500 500)
+```
+
+Example iterative fractal program to approximate the Sierpinski triangle using an arrowhead curve:
+```lisp
+(define sierpinski-system (([A: (draw-forward 1 "black")]
+                           [B: (draw-forward 1 "black")]
+                           [L: (turn 60)]
+                           [R: (turn -60)])
+                          A
+                          ([A -> BRARB]
+                           [B -> ALBLA])))
+
+(define sierpinski (generate-ifractal sierpinski-system 0 2D))
+
+(hausdorff-dimension sierpinski) ; returns 1.5850
+(iterate sierpinski 2) ; returns ifractal with state ALBLARBRARBRALBLA
+
+(render sierpinski 2 500 500)
+```
