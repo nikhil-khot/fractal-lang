@@ -4,7 +4,12 @@
 (require graphics/value-turtles)
 (require 2htdp/universe)
 (require pict)
-(require (prefix-in img- 2htdp/image))
+
+(provide generate-ifractal
+         render
+         iterate
+         bang)
+         
 
 ; Iterative Fractal
 
@@ -89,6 +94,8 @@
                                               (index-of defined-xs ltr)))
                           (cons ltr ltr)))))])))
 
+
+
 ; render : (-> IFractal Natural PosInt PosInt Natural)
 (define (render ifractal iters height width)
   (let ([frac (iterate ifractal iters)]
@@ -122,26 +129,19 @@
        transforms (sub1 iters))))
 
 
-; Sierpinski approximation
-#;(define f (generate-ifractal [([A : (draw 1)] [B : (draw 1)] [+ : (turn 60)] [- : (turn -60)])
-             [A]
-             ([A -> B - A - B] [B -> A + B + A])]))
-
-; Dragon curve
-(define f (generate-ifractal [([A : (draw 1)] [B : (draw 1)] [+ : (turn 90)] [- : (turn -90)])
-             [A]
-             ([A -> A + B] [B -> A - B])]))
-
-
 (define (render-frac f)
   (pict->bitmap (render f 0 500 500)))
 
 
-(define (BANG)
+(define (bang f)
   (big-bang f
     (on-draw render-frac)
     (display-mode 'fullscreen)
     (on-key (λ (frac _) (iterate frac 1)))))
 
-(BANG)
+
+
+
+
+
       
