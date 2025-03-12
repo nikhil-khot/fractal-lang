@@ -1,16 +1,16 @@
 #lang racket
 
 (require 2htdp/universe)
-(require 2htdp/image)
-(require racket/gui/base)
+;(require 2htdp/image)
+(require racket/draw)
 
-(define WIDTH 700)
-(define HEIGHT 700)
-(define MAX-ITER 100)
+(define WIDTH 50)
+(define HEIGHT 50)
+(define MAX-ITER 500)
 (define ZOOM 200.0)
 
 ;;Represents the state of the rendering of the escape time fractal
-(define-struct world-state [image width height max-iterations zoom])
+(define-struct world-state [image max-iterations zoom])
 
 ;;The updater for a Mandelbrot fractal
 (define mand-upd (λ (z c) (+ (* z z) c)))
@@ -25,11 +25,12 @@
 ;;The updater for a Julia fractal
 (define julia-upd (λ (k) (λ (z _) (+ (* z z) k))))
 
+
 ;;Finds the number of steps it takes to escape to infinity given some updater
 (define (steps-to-inf et-fractal-update x y world)
   (letrec
-      ([width (world-state-width world)]
-       [height (world-state-height world)]
+      ([width (send (world-state-image world) get-width)]
+       [height (send (world-state-image world) get-height)]
        [complex-posn (make-rectangular (/ (- x (/ width 2))
                                           (world-state-zoom world))
                                        (/ (- y (/ height) 2)
@@ -71,23 +72,53 @@
 (define (draw-fractal-mutates etf-updater color-func world)
   (letrec
       ([image (world-state-image world)]
-       [width (world-state-width world)]
-       [height (world-state-width world)])
-    (color-list->bitmap
-     (generate-pixels etf-updater color-func width height world)
-     width
-     height)))
+       [width (send (world-state-image world) get-width)]
+       [height (send (world-state-image world) get-height)]
+       [create-bytes (λ (x y prev-bytes)
+                       (let* ([steps (steps-to-inf etf-updater x y world)]
+                              [color (color-func steps)]
+                              [next-x (if (= x (sub1 width))
+                                          0
+                                          (add1 x))]
+                              [next-y (if (= y height)
+                                          0
+                                          (if (= next-x 0)
+                                              (add1 y)
+                                              y))]
+                              [curr-bytes (bytes 100
+                                                 (send color red)
+                                                 (send color green)
+                                                 (send color blue))])
+                         (displayln (send color blue))
+                         (if (and (= x (sub1 width)) (= y (sub1 height)))
+                             (bytes-append prev-bytes curr-bytes)
+                             (create-bytes next-x next-y (bytes-append curr-bytes prev-bytes))
+                             )))])
+    (begin
+      (send image set-argb-pixels 0 0	 	 	 
+          width
+          height
+          (create-bytes 0 0 (bytes))
+          image)
+           image)))
 
-;;Creates a color for each of the pixels in the fractal image
-(define (generate-pixels etf-updater color-func width height world)
-  (for*/list ([x (range width)]
-              [y (range height)])
-    (let ([num-steps (steps-to-inf etf-updater x y world)])
-      (color-func num-steps))))
+
+#; (for/list ([x (in-range (send (world-state-image world) get-width))])
+     (for/list ([y (in-range (send (world-state-image world) get-height))])
+       (let* ([steps (steps-to-inf etf-updater x y world)]
+              [color (color-func steps)]
+              [image (world-state-image world)])
+         (begin (send image set-argb-pixels x y 	 	 	 
+                      1
+                      1
+                      (bytes 0 (send color red)
+                             (send color green)
+                             (send color blue))
+                      image)))))
 
 ; Draw function for big-bang
 (define (render world)
-  (draw-fractal-mutates mand-upd
+  (draw-fractal-mutates burn-upd
                         (simple-color world)
                         world))
 
@@ -106,9 +137,7 @@
     [else worldstate]))
 
 (render (make-world-state
-         (rectangle WIDTH HEIGHT "solid" "green")
-         WIDTH
-         HEIGHT
+         (make-object bitmap% WIDTH HEIGHT)
          MAX-ITER
          ZOOM))
 
