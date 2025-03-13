@@ -7,12 +7,10 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ## Language Grammar
 ```lisp
 ; generate-etfractal :
-; (-> (-> Complex Complex Complex) Complex [Bounds Bounds] ETFractal)
+; (-> (-> Complex Complex Complex) Dimension ETFractal)
 ; Creates an escape-time fractal based on a function of two complex
 ; values (z and c, where z is the value of the last iteration of the
-; function and c is the point being tested), a complex value for z0,
-; and a certain bounds that is used to determine if the value of the
-; function has “escaped”
+; function and c is the point being tested)
 
 ; (bounds Complex Complex)
 (define-struct bounds [upper lower])
@@ -31,12 +29,12 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; Will determine the number of steps to escape for some point on the
 ; complex plane. Errors if the given point does not escape.
 
-; <Color-ETF> := #:color-func (-> Complex Color)
-;              | #:color-func (-> Complex ETFractal Color)
+; <Color-ETF> := #:color-func (-> Natural (-> Natural Color))
+;              | #:color-func (-> [0, 1] [0, 1] [0, 1] Natural (-> Complex ETFractal Color))
 ;              | #:color-gradient (list Color)
 
-; render : (-> ETFractal <Color-ETF> [Bounds Bounds] PosInt PosInt
-;           [Bounds Bounds])
+; render : (-> ETFractal <Color-ETF> [Bounds Bounds] PosInt PosInt)
+
 ; Will render an escape time fractal, using the provided means of
 ; coloring (either a function that determines the color of each point,
 ; or a list of colors to use as a gradient depending on the speed of
