@@ -95,7 +95,7 @@ Below are the milestones for this project:
 - 02/23/25: Implement the runtime of the functionality of escape time fractals
 - 03/02/25: Implement the runtime of the functionality of iterative fractals
 - 03/09/25: Add the compile time macros of the DSL to enable for two dimensional fractals to be generated using standard notations.
-- 03/13/25: Ensure reasonable error messages for the language and language smoothly extends to three dimensions
+- 03/20/25: Ensure reasonable error messages for the language and language smoothly extends to three dimensions
     - If needed, this is the point by which we will make sure the grammar of the language is easily translatable into three dimensions. The main feature that we may need to edit is our assumptions on Space, as while the complex plane is standard to use in two dimensions, there is no analagous representation in three dimensions.
 - 04/06/25: Add runtime support for three dimensional rendering of fractals for both escape time and iterative fractals
 - 04/13/25: Extend the language syntax to allow for three dimensional fractal generation using standard notations
@@ -107,19 +107,9 @@ Example escape-time fractal program to generate the mandelbrot set:
 ```lisp
 (define mand-upd (λ (z c) (+ (sqr z) c)))
 
-(define mandelbrot (generate-etfractal mand-upd 0 2 2D))
+(define mand-etf (generate-etfractal mand-upd '2D))
 
-
-(hausdorff-dim mandelbrot) ; returns 2
-(point-in-set? mandelbrot 0) ; returns #t
-(point-in-set? mandelbrot (+ 5 7i)) ; returns #f
-
-(define mand-color (lambda (c etf)
-                     (cond [(point-in-set? etf c) "black"]
-                           [(< 5 (steps-to-escape etf c)) "blue"]
-                           [else "light blue"])))
-
-(render mandelbrot mand-color [(bounds -2 2) (bounds -2i 2i)] 500 500)
+(render mand-etf simple-color 100 [(bounds -2 2) (bounds -1.5+1.5i 1.5-1.5i)] 500 500)
 ```
 
 Example iterative fractal program to approximate the Sierpinski triangle using an arrowhead curve:
