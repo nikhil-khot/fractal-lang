@@ -18,17 +18,21 @@
 
 ; generate-ifractal : -> <L-System> <Space> IFractal
 ; <L-System> := [(<Binding> ...+) [<State>] (<Transformation> ...)]
-
+(begin-for-syntax
+  (define-syntax-class binding
+      #:description "binding pair"
+      (pattern [x:id (~datum :) f:command]))
+  (define-syntax-class transform
+      #:description "transformation"
+      (pattern [x:id (~datum ->) y:id ...+]))
+  (define-syntax-class command
+      #:description "command"
+      (pattern (~or ((~datum draw) x)
+                    ((~datum turn) x)))))
 
 
 (define-syntax generate-ifractal
   (lambda (stx)
-    (define-syntax-class binding
-      #:description "binding pair"
-      (pattern [x:id (~datum :) f]))
-    (define-syntax-class transform
-      #:description "transformation"
-      (pattern [x:id (~datum ->) y:id ...+]))
     (syntax-parse stx
       [(_ [(binds:binding ...+) [state:id ...+] (transforms:transform ...)])
        #'(ifractal (parse-bindings binds ...)
@@ -44,13 +48,6 @@
 
 (define-syntax parse-bindings
   (lambda (stx)
-    (define-syntax-class command
-      #:description "command"
-      (pattern (~or ((~datum draw) x)
-                    ((~datum turn) x))))
-    (define-syntax-class binding
-      #:description "binding pair"
-      (pattern [x:id (~datum :) f:command]))
     (syntax-parse stx
       [(_ binds:binding ...)
        #'(make-immutable-hash
@@ -60,10 +57,6 @@
 
 (define-syntax parse-commands
   (lambda (stx)
-    (define-syntax-class command
-      #:description "command"
-      (pattern (~or ((~datum draw) x)
-                    ((~datum turn) x))))
     (syntax-parse stx
       [(_ ((~datum draw) x)) #'(lambda (t) (draw x t))]
       [(_ ((~datum turn) x)) #'(lambda (t) (turn x t))])))
@@ -74,19 +67,18 @@
 (define-syntax parse-state
   (lambda (stx)
     (syntax-parse stx
-      [(_ x:id ...) #'(list 'x ...)])))
-
+      [(_ x:id) #'(for/list ([char (string->list (symbol->string 'x))])
+                      (string->symbol (string char)))]
+      [(_) #'()])))
+  
 ; <Transformation> := [<id> -> <State>]
 
 (define-syntax parse-transforms
   (lambda (stx)
-    (define-syntax-class transform
-      #:description "transformation"
-      (pattern [x:id (~datum ->) y:id ...+]))
     (syntax-parse stx
       [(_ transforms:transform ... alphabet:id ...+)
        #'(let ([defined-xs (list 'transforms.x ...)]
-               [defined-ys (list (list 'transforms.y ...) ...)])
+               [defined-ys (list (parse-state transforms.y ...) ...)])
            (make-immutable-hash
             (for/list ([ltr (list 'alphabet ...)])
               (if (member ltr defined-xs)
@@ -129,17 +121,38 @@
        transforms (sub1 iters))))
 
 
+(define-struct fract [fractal iter imgs])
+
+
 (define (render-frac f)
-  (pict->bitmap (render f 0 500 500)))
+  (pict->bitmap
+   (scale-to-fit
+    (render f 0 500 500)
+    500 500)
+   ))
+
+(define (draw-handler f)
+  (list-ref (fract-imgs f) (- (length (fract-imgs f)) (add1 (fract-iter f)))))
 
 
-(define (bang f)
+(define (key-handler f ke)
+  (cond [(key=? ke "left") (fract (fract-fractal f) (sub1 (fract-iter f)) (fract-imgs f))]
+        [(key=? ke "right") (if (= (length (fract-imgs f)) (add1 (fract-iter f)))
+                                (let ([new-frac (iterate (fract-fractal f) 1)])
+                                  (fract new-frac (add1 (fract-iter f)) (cons (render-frac new-frac) (fract-imgs f))))
+                                (fract (fract-fractal f) (add1 (fract-iter f)) (fract-imgs f)))]
+        [else f]))
+
+#;(define (bang f)
   (big-bang f
     (on-draw render-frac)
     (display-mode 'fullscreen)
     (on-key (λ (frac _) (iterate frac 1)))))
-
-
+(define (bang f)
+  (big-bang (fract f 0 (cons (render-frac f) '()))
+    (on-draw draw-handler)
+    (display-mode 'fullscreen)
+    (on-key key-handler)))
 
 
 
