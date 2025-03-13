@@ -89,7 +89,7 @@
       [(_) #'()])))
   
 ; <Transformation> := [<id> -> <State>]
-; parse-transforms: (-> <Transformation> ... id ...+ [HashOf Symbol [ListOf Symbol]])
+; parse-transforms: (-> <Transformation> ... <id> ...+ [HashOf Symbol [ListOf Symbol]])
 (define-syntax parse-transforms
   (lambda (stx)
     (syntax-parse stx
@@ -202,7 +202,3 @@
     (display-mode 'fullscreen)
     (on-key key-handler))))
 
-
-
-
-      

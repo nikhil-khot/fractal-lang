@@ -8,8 +8,8 @@
                               ([A -> B-A-B] [B -> A+B+A])]))
 
 ; Dragon curve
-(define f (generate-ifractal [([A : (draw 1 "white")] [B : (draw 1 "white")] [+ : (turn 90)] [- : (turn -90)])
+(define f (generate-ifractal [([A : (draw 1 "red")] [B : (draw 1 "blue")] [+ : (turn 90)] [- : (turn -90)])
              [A]
              ([A -> A+B] [B -> A-B])]))
 
-;(bang f)
+(bang f)

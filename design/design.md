@@ -56,20 +56,19 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; within the State.
 
 ; <Binding> := [<id>: <command>]
-; A <command> is one of or a composition of commands from a yet to be
-; defined list of actions, including moving forward, drawing forward,
-; rotating, saving the current location, returning to a location,
-; and more as we define the need for them
+; A <command> is one of or a composition of commands from a defined list of actions.
+; Currently including: moving, drawing in color, and rotating
+; TODO: Saving location, returning to location
 
 ; <State> := <id>
 ;          | <id><State>
 ; The state is represented by a contiguous set of identifiers that have
 ; no space between them. These identifiers are associated with some
 ; transformation of the graphical representation of the fractal. If
-l there is an identifier that does not exist, then a syntax error
+; there is an identifier that does not exist, then an error
 ; will be raised.
 
-; <Transformation> := [<State> -> <State>]
+; <Transformation> := [<id-> <State>]
 ; A transformation is some identifier to some new state. These 
 ; transformations update the state of the fractal and the state of the
 ; fractal determines its graphical representation. All transformations
@@ -79,16 +78,10 @@ l there is an identifier that does not exist, then a syntax error
 ; Iterate will apply transformations on the current state of the fractal
 ; to create a new state. 
 
-; hausdorff-dim : (-> IFractal Number)
-; Returns the hausdorff dimension of the given iterative fractal
-
-; render : (-> IFractal Natural PosInt PosInt Natural)
+; render : (-> IFractal Natural PosInt PosInt Pict)
 ; Will render some iterative fractal with some number of iterations
-; applied to the fractal and some bounds of the window and will
-; return the number of iterations so far.
+; applied to the fractal and some bounds of the window
 ```
-
-Note: Some of the signatures above (notably generate-etfractal and generate-ifractal) are likely to change by our first milestone to incorporate a representation of Space, indicating whether the fractal is to be viewed in 2 or 3 dimensions, and which system of measurement to use (currently defaulting to the complex plane, as it is the standard, but should allow for rectangular and spherical coordinates as well.)
 
 ## Milestones
 Below are the milestones for this project:
@@ -126,17 +119,12 @@ Example escape-time fractal program to generate the mandelbrot set:
 
 Example iterative fractal program to approximate the Sierpinski triangle using an arrowhead curve:
 ```lisp
-(define sierpinski-system (([A: (draw-forward 1 "black")]
-                           [B: (draw-forward 1 "black")]
-                           [L: (turn 60)]
-                           [R: (turn -60)])
-                          A
-                          ([A -> BRARB]
-                           [B -> ALBLA])))
+(define sierpinski-system (generate-ifractal [([A : (draw 1 "black")] [B : (draw 1 "black")] [L : (turn 60)] [R : (turn -60)])
+                              [A]
+                              ([A -> BRARB] [B -> ALBLA])]))
 
 (define sierpinski (generate-ifractal sierpinski-system 0 2D))
 
-(hausdorff-dimension sierpinski) ; returns 1.5850
 (iterate sierpinski 2) ; returns IFractal with state ALBLARBRARBRALBLA
 
 (render sierpinski 2 500 500)
