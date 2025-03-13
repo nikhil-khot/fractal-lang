@@ -173,7 +173,7 @@
 
 
 ; Struct to hold the fractal, current iteration, and previous iterations
-(define-struct fract [fractal iter imgs])
+(define-struct world-state [fractal iter imgs])
 
 ; Renders the fractal, scales it, and turns it into a bitmap for big-bang to use
 (define (render-frac f)
@@ -186,18 +186,18 @@
 
 ; Accesses the corresponding bitmap for the current fractal iteration
 (define (draw-handler f)
-  (list-ref (fract-imgs f) (- (length (fract-imgs f)) (add1 (fract-iter f)))))
+  (list-ref (world-state-imgs f) (- (length (world-state-imgs f)) (add1 (world-state-iter f)))))
 
 (define (key-handler f ke)
-  (cond [(key=? ke "left") (fract (fract-fractal f) (sub1 (fract-iter f)) (fract-imgs f))]
-        [(key=? ke "right") (if (= (length (fract-imgs f)) (add1 (fract-iter f)))
-                                (let ([new-frac (iterate (fract-fractal f) 1)])
-                                  (fract new-frac (add1 (fract-iter f)) (cons (render-frac new-frac) (fract-imgs f))))
-                                (fract (fract-fractal f) (add1 (fract-iter f)) (fract-imgs f)))]
+  (cond [(key=? ke "left") (world-state (world-state-fractal f) (sub1 (world-state-iter f)) (world-state-imgs f))]
+        [(key=? ke "right") (if (= (length (world-state-imgs f)) (add1 (world-state-iter f)))
+                                (let ([new-frac (iterate (world-state-fractal f) 1)])
+                                  (world-state new-frac (add1 (world-state-iter f)) (cons (render-frac new-frac) (world-state-imgs f))))
+                                (world-state (world-state-fractal f) (add1 (world-state-iter f)) (world-state-imgs f)))]
         [else f]))
 
 (define (bang f)
-  (fract-fractal (big-bang (fract f 0 (cons (render-frac f) '()))
+  (world-state-fractal (big-bang (world-state f 0 (cons (render-frac f) '()))
     (on-draw draw-handler)
     (display-mode 'fullscreen)
     (on-key key-handler))))
