@@ -13,7 +13,7 @@
 
 ;;Represents the state of the rendering of the escape time fractal
 (define-struct world-state [image width height et-fractal max-iterations escape-bounds bounds pixels-computed total-pixels] #:mutable)
-;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
+;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
 ;; and represent the state of the given escape time fractal
 ;; image - the state of the rendering of the fractal
 ;; width - The width of the window drawn to
@@ -251,24 +251,26 @@
        (send display-canvas refresh-now)))
     display-frame))
 
-(define (render etf color-func 
-          #:max-iterations max-iter
-          #:escape-bounds escape-bounds
-          #:horizontal-bounds x-lower x-upper
-          #:vertical-bounds y-lower y-upper
-          #:window-width width 
-          #:window-height height)
+
+(define-syntax-rule (render etf color-func
+                           #:max-iterations max-iter
+                           #:escape-bounds escape-bounds
+                           #:horizontal-bounds (x-lower x-upper)
+                           #:vertical-bounds (y-lower y-upper)
+                           #:window-width width
+                           #:window-height height)
   (begin
-      (for-each (λ (val name)
-                  (unless (complex? val)
-                    (error 'render "~a must be a complex number, got: ~v" name val)))
-                (list x-lower x-upper y-lower y-upper)
-                '("x-lower" "x-upper" "y-lower" "y-upper"))
-      (create-frame color-func (make-world-state
-                           (make-object bitmap% width height)
-                           width height etf max-iter escape-bounds
-                           (list (list x-lower x-upper)
-                                 (list y-lower y-upper))
-                           0
-                           (* width height)))))
+    (for-each (λ (val name)
+                (unless (complex? val)
+                  (error 'render "~a must be a complex number, got: ~v" name val)))
+              (list x-lower x-upper y-lower y-upper)
+              '("x-lower" "x-upper" "y-lower" "y-upper"))
+    (create-frame color-func (make-world-state
+                              (make-object bitmap% width height)
+                              width height etf max-iter escape-bounds
+                              (list (list x-lower x-upper)
+                                    (list y-lower y-upper))
+                              0
+                              (* width height)))))
+
 

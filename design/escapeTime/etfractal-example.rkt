@@ -11,15 +11,9 @@
 (render mand-etf simple-color
         #:max-iterations 100
         #:escape-bounds 2
-        -1-0.5i
-        #:horizontal-bounds  1+0.5i
-        #:vertical-bounds -1-0.5i 1+0.5i
+        #:horizontal-bounds (1+0.5i -1-0.5i)
+        #:vertical-bounds (-1-0.5i 1+0.5i)
         #:window-width 600 #:window-height 600)
-
-;;Make sure bounds are being
-;;(with-colors ...
-;;  default-colors
-;; IF TIME ALLOWS : parallel
 
 ;;The updater for a Burning Ship fractal
 (define burn-upd (λ (z c)
