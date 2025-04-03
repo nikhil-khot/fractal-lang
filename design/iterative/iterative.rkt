@@ -3,9 +3,9 @@
 (require (for-syntax syntax/parse))
 (require graphics/value-turtles)
 (require 2htdp/universe)
-(require (prefix-in img: 2htdp/image))
 (require pict)
 (require rackunit)
+(require syntax/macro-testing)
 
 (provide generate-ifractal
          render
@@ -21,9 +21,6 @@
 
 ; <L-System> := [(<Binding> ...+) [<State>] (<Transformation> ...)]
 (begin-for-syntax
-  (define-syntax-class parameter-binding
-      #:description "parameter definition"
-      (pattern [p:id (~datum =) x:number]))
   (define-syntax-class binding
       #:description "binding pair"
       (pattern [x:id (~datum :) f:command]
@@ -34,17 +31,14 @@
       (pattern [x:id (~datum ->) y:id]
         #:fail-unless (= 1 (string-length (symbol->string (syntax-e #'x))))
         "Can only transform identifiers of length 1"))
-  (define-syntax-class parameter-transform
-      #:description "parameter transformation"
-      (pattern [p:id (~or (~datum +=)
-                          (~datum -=)
-                          (~datum *=)
-                          (~datum /=)) x:number]))
   (define-syntax-class command
       #:description "command"
       (pattern (~or ((~datum draw) x:number color:string)
+                    ((~datum draw) x:id color:string)
                     ((~datum move) x:number)
+                    ((~datum move) x:id)
                     ((~datum turn) x:number)
+                    ((~datum turn) x:id)
                     ((~datum save))
                     ((~datum return))
                     ((~datum none))
@@ -93,7 +87,7 @@
 (define-syntax parse-commands
   (lambda (stx)
     (syntax-parse stx
-      [(_ ((~datum draw) x color:string)) #'(λ (t) (turt (draw x (set-pen-color (turt-turtle t) color))
+      [(_ ((~datum draw) x:number color:string)) #'(λ (t) (turt (draw x (set-pen-color (turt-turtle t) color))
                                                               (turt-stack t)))]
       [(_ ((~datum move) x:number)) #'(λ (t) (turt (move x (turt-turtle t))
                                                  (turt-stack t)))]
@@ -135,16 +129,15 @@
                                               (index-of defined-xs ltr)))
                           (cons ltr (list ltr))))))])))
 
-
 ; iterate : (-> IFractal Natural IFractal)
 ; Iterates the fractal the provided number of times
 (define (iterate frac iters)
   (if (< iters 0)
       (error "Cannot iterate backwards")
       (ifractal (ifractal-bindings frac)
-            (update-state (ifractal-state frac) (ifractal-transformations frac) iters)
-            (ifractal-transformations frac)
-            (ifractal-is-2D frac))))
+                (update-state (ifractal-state frac) (ifractal-transformations frac) iters)
+                (ifractal-transformations frac)
+                (ifractal-is-2D frac))))
 
 ; update-state : (-> [ListOf Symbol] [HashOf Symbol [ListOf Symbol]] Natural [ListOf Symbol])
 ; Updates the state iters times, using the provided transforms
@@ -158,10 +151,14 @@
 
 
 (module+ test
-  #;(check-exn #rx"Can only use bindings of length 1: 'AB"
-             (lambda () (generate-ifractal [([AB : (draw 1 "white")])
+  (check-exn #rx"Can only use binding identifiers of length 1"
+             (lambda () (convert-compile-time-error (generate-ifractal [([AB : (draw 1 "white")])
              [AB]
-             ([AB -> ABAB])])))
+             ([AB -> ABAB])]))))
+  (check-exn #rx"Can only transform identifiers of length 1"
+             (lambda () (convert-compile-time-error (generate-ifractal [([A : (draw 1 "white")] [B : (draw 1 "white")])
+             [A]
+             ([AB -> ABAB])]))))
   (check-exn #rx"Undefined identifier in initial state: 'C"
              (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
              [C]
@@ -209,37 +206,41 @@
 
 
 ; Struct to hold the fractal, current iteration, and previous iterations
-(define-struct world-state [fractal iter imgs])
+(define-struct world-state [fractal iter imgs width height])
 
-; Renders the fractal, scales it, and turns it into a bitmap for big-bang to use
-(define (render-frac f iter)
-  (let ([img (render f 0 500 500)])
+; Renders the fractal, shows the iteration number, and turns it into a bitmap for big-bang to use
+(define (render-frac f iter width height)
+  (let ([img (render f 0 width height)])
     (pict->bitmap
      (vc-append 20
-                (text (string-append "Iteration: " (number->string iter)) null 50)
-                img)
-     )))
+                (text (string-append "Iteration: " (number->string iter)) null (/ height 10))
+                img))))
 
 ; Accesses the corresponding bitmap for the current fractal iteration
 (define (draw-handler f)
-  (list-ref (world-state-imgs f) (- (length (world-state-imgs f)) (add1 (world-state-iter f))))
-         )
+  (list-ref (world-state-imgs f) (- (length (world-state-imgs f))
+                                    (add1 (world-state-iter f)))))
 
 (define (key-handler f ke)
   (cond [(key=? ke "left")
          (if (zero? (world-state-iter f))
              f
-             (world-state (world-state-fractal f) (sub1 (world-state-iter f)) (world-state-imgs f)))]
+             (world-state (world-state-fractal f) (sub1 (world-state-iter f)) (world-state-imgs f)
+                          (world-state-width f) (world-state-height f)))]
         [(key=? ke "right") (if (= (length (world-state-imgs f)) (add1 (world-state-iter f)))
                                 (let ([new-frac (iterate (world-state-fractal f) 1)])
                                   (world-state new-frac (add1 (world-state-iter f))
-                                               (cons (render-frac new-frac (add1 (world-state-iter f)))
-                                                     (world-state-imgs f))))
-                                (world-state (world-state-fractal f) (add1 (world-state-iter f)) (world-state-imgs f)))]
+                                               (cons (render-frac new-frac (add1 (world-state-iter f))
+                                                                  (world-state-width f) (world-state-height f))
+                                                     (world-state-imgs f))
+                                               (world-state-width f) (world-state-height f)))
+                                (world-state (world-state-fractal f) (add1 (world-state-iter f)) (world-state-imgs f)
+                                             (world-state-width f) (world-state-height f)))]
         [else f]))
 
-(define (bang f)
-  (world-state-fractal (big-bang (world-state f 0 (cons (render-frac f 0) '()))
+(define (bang f w h)
+  (world-state-fractal
+   (big-bang (world-state f 0 (cons (render-frac f 0 w h) '()) w h)
     (on-draw draw-handler)
     (on-key key-handler))))
 
