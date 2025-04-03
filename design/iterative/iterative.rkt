@@ -32,11 +32,8 @@
   (define-syntax-class command
       #:description "command"
       (pattern (~or ((~datum draw) x:number color:string)
-                    ((~datum draw) x:id color:string)
                     ((~datum move) x:number)
-                    ((~datum move) x:id)
                     ((~datum turn) x:number)
-                    ((~datum turn) x:id)
                     ((~datum save))
                     ((~datum return))
                     ((~datum none))
