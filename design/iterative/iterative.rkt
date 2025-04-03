@@ -14,7 +14,7 @@
          
 ; Iterative Fractals
 
-(define-struct ifractal [bindings state transformations is-2D])
+(define-struct ifractal [bindings state transformations])
 ; (ifractal [HashOf Bindings] (ListOf <State>) [HashOf <Transformation>] Boolean)
 
 ; <L-System> := [(<Binding> ...+) [<State>] (<Transformation> ...)]
@@ -49,7 +49,7 @@
                [parsed-state (parse-state state)]
                [parsed-transforms (parse-transforms transforms ... binds.x ...)])
            (check-bindings (list 'binds.x ...) parsed-state (list 'transforms.x ...) (hash-values parsed-transforms))
-           (ifractal parsed-binds parsed-state parsed-transforms '2D))])))
+           (ifractal parsed-binds parsed-state parsed-transforms))])))
 
 (define (check-bindings binds state t-keys t-vals)
   (andmap (λ (l) (unless (member l binds)
@@ -149,8 +149,7 @@
       (error "Cannot iterate backwards")
       (ifractal (ifractal-bindings frac)
                 (update-state (ifractal-state frac) (ifractal-transformations frac) iters)
-                (ifractal-transformations frac)
-                (ifractal-is-2D frac))))
+                (ifractal-transformations frac))))
 
 ; update-state : (-> [ListOf Symbol] [HashOf Symbol [ListOf Symbol]] Natural [ListOf Symbol])
 ; Updates the state iters times, using the provided transforms

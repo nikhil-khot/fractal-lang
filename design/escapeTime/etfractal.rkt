@@ -13,7 +13,7 @@
 
 ;;Represents the state of the rendering of the escape time fractal
 (define-struct world-state [image width height et-fractal max-iterations escape-bounds bounds pixels-computed total-pixels] #:mutable)
-;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
+;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
 ;; and represent the state of the given escape time fractal
 ;; image - the state of the rendering of the fractal
 ;; width - The width of the window drawn to
