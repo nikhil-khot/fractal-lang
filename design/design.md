@@ -7,13 +7,12 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ## Language Grammar
 ```lisp
 ; generate-etfractal :
-; (-> (-> Complex Complex Complex) Dimension ETFractal)
+; (-> (-> Complex Complex Complex) ETFractal)
 ; Creates an escape-time fractal based on a function of two complex
 ; values (z and c, where z is the value of the last iteration of the
 ; function and c is the point being tested)
 
-; (bounds Complex Complex)
-(define-struct bounds [upper lower])
+; bounds: (Complex Complex)
 ; The bounds that the fractal will be generated upon. Used to limit the
 ; region for which escape-time fractals are calculated and rendered upon.
 
@@ -21,19 +20,20 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; Will determine if the given complex point is in the set of points of
 ; the escape-time fractal.
 
-; hausdorff-dim : (-> ETFractal Number)
-; Will get the hausdorff dimension of the given escape time fractal.
-; The hausdorff dimension generally describes how “bumpy” a fractal is.
-
 ; steps-to-escape : (-> ETFractal Complex Natural)
 ; Will determine the number of steps to escape for some point on the
 ; complex plane. Errors if the given point does not escape.
 
 ; <Color-ETF> := #:color-func (-> Natural (-> Natural Color))
-;              | #:color-func (-> [0, 1] [0, 1] [0, 1] Natural (-> Complex ETFractal Color))
-;              | #:color-gradient (list Color)
+;              | #:color-func (-> Natural Natural Natural Natural (-> Natural Color))
 
-; render : (-> ETFractal <Color-ETF> [Bounds Bounds] PosInt PosInt)
+; render : (-> ETFractal 
+               <Color-ETF>
+               #:escape-bounds Natural
+               #:horizontal-bounds [Bounds]
+               #:vertical-bounds [Bounds]
+               #:window-height PosInt
+               #:window-width PosInt)
 
 ; Will render an escape time fractal, using the provided means of
 ; coloring (either a function that determines the color of each point,

@@ -69,7 +69,7 @@
 ;;Will create coloring rules based on the ratios the user supplies. The function returned will
 ;;return the color that is assosicated with the given number of steps to infinity. All of the
 ;;ratios of each of the colors is relative to the other color values
-;;simple-color-ratio: Decimal Decimal Decimal Natural (-> Natural Color)
+;;simple-color-ratio: Natural Natural Natural Natural (-> Natural Color)
 (define (simple-color-ratio r-ratio g-ratio b-ratio max-iters)
   (let*
       ([ratio-sum (+ r-ratio g-ratio b-ratio)]
