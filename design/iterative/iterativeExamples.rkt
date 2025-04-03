@@ -9,7 +9,7 @@
 
 ; Dragon curve
 #;(define f (generate-ifractal [([A : (draw 50 "red")] [B : (draw 50 "blue")] [+ : (turn 90)] [- : (turn -90)])
-             [A]
+             [A+B]
              ([A -> A+B] [B -> A-B])]))
 
 ; Sierpinski exact
@@ -48,5 +48,11 @@
                               [F]
                               ([F -> -BFB+G-BFB+] [G -> G])]))
 
-(bang f 500 200)
+#;(define f (generate-ifractal [([F : (combine (draw 10 "black") (turn -45) (draw 10 "black")
+                                             (turn 90) (draw 10 "black") (turn -45) (draw 10 "black"))]
+                               [+ : (turn 60)] [- : (turn -120)])
+                              [F]
+                              ([F -> F+F-F+F])]))
+
+(bang f 600 600)
 

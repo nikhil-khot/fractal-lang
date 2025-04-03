@@ -3,7 +3,6 @@
 (require (only-in 2htdp/image color-list->bitmap))
 (require racket/gui/base)
 (require (for-syntax syntax/parse))
-(require syntax-spec-v3)
 
 (provide
  generate-etfractal
@@ -253,12 +252,12 @@
 
 
 (define-syntax-rule (render etf color-func
-                           #:max-iterations max-iter
-                           #:escape-bounds escape-bounds
-                           #:horizontal-bounds (x-lower x-upper)
-                           #:vertical-bounds (y-lower y-upper)
-                           #:window-width width
-                           #:window-height height)
+                            #:max-iterations max-iter 
+                            #:escape-bounds escape-bounds 
+                            #:horizontal-bounds (x-lower x-upper)
+                            #:vertical-bounds (y-lower y-upper)
+                            #:window-width width
+                            #:window-height height)
   (begin
     (for-each (λ (val name)
                 (unless (complex? val)
