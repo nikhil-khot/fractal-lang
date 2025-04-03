@@ -41,12 +41,11 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; escape), within the given bounds and window size. Returns the final
 ; bounds being used to view the fractal.
 
-; generate-ifractal : -> <L-System> Number IFractal
-; Creates an iterative fractal based on a provided L-System, initialized
-; to the provided iteration of the fractal.
+; generate-ifractal : (-> <L-System> IFractal)
+; Creates an iterative fractal based on a provided L-System,
 
 ; <L-System> := ((<Binding> ...+) [<State>] (<Transformation> ...))
-; An L system is used to represent iterative fractals. The bindings
+; An L-system is used to represent iterative fractals. The bindings
 ; define all possible commands for this L-System. These bindings are
 ; then used to define the initial state of the system, and the
 ; transformations to apply at each iteration. If a binding has no defined
@@ -55,8 +54,8 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 
 ; <Binding> := [<id>: <command>]
 ; A <command> is one of or a composition of commands from a defined list of actions.
-; Currently including: moving, drawing in color, and rotating
-; TODO: Saving location, returning to location
+; Currently including: moving, drawing in color, rotating, doing nothing,
+; saving current position and rotation, returning to saved position and rotation
 
 ; <State> := <id>
 ;          | <id><State>
@@ -77,8 +76,8 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; to create a new state. 
 
 ; render : (-> IFractal Natural PosInt PosInt Pict)
-; Will render some iterative fractal with some number of iterations
-; applied to the fractal and some bounds of the window
+; Will render the provided iterative fractal with the provided number of iterations applied
+; and scaled to fit the provided window bounds
 ```
 
 ## Milestones
@@ -98,22 +97,26 @@ Below are the milestones for this project:
 
 Example escape-time fractal program to generate the mandelbrot set:
 ```lisp
-(define mand-upd (λ (z c) (+ (sqr z) c)))
+(define mand-upd (λ (z c) (+ (* z z) c)))
 
-(define mand-etf (generate-etfractal mand-upd '2D))
+(define mand-etf (generate-etfractal mand-upd))
 
-(render mand-etf simple-color 100 [(bounds -2 2) (bounds -1.5+1.5i 1.5-1.5i)] 500 500)
+(render mand-etf simple-color
+        #:max-iterations 100
+        #:escape-bounds 2
+        #:horizontal-bounds (1+0.5i -1-0.5i)
+        #:vertical-bounds (-1-0.5i 1+0.5i)
+        #:window-width 600 #:window-height 600)
 ```
 
 Example iterative fractal program to approximate the Sierpinski triangle using an arrowhead curve:
 ```lisp
-(define sierpinski-system (generate-ifractal [([A : (draw 1 "black")] [B : (draw 1 "black")] [L : (turn 60)] [R : (turn -60)])
-                              [A]
-                              ([A -> BRARB] [B -> ALBLA])]))
-
-(define sierpinski (generate-ifractal sierpinski-system 0 2D))
-
-(iterate sierpinski 2) ; returns IFractal with state ALBLARBRARBRALBLA
+(define f (generate-ifractal [([A : (draw 1 "black")] [B : (draw 1 "black")]
+                               [+ : (turn 60)] [- : (turn -60)])
+                              [B-A-B]
+                              ([A -> B-A-B] [B -> A+B+A])]))
 
 (render sierpinski 2 500 500)
+
+(render/interactive sierpinski 600 600)
 ```

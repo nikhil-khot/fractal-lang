@@ -54,5 +54,5 @@
                               [F]
                               ([F -> F+F-F+F])]))
 
-(bang f 600 600)
+(render/interactive f 600 600)
 

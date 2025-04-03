@@ -10,7 +10,7 @@
 (provide generate-ifractal
          render
          iterate
-         bang)
+         render/interactive)
          
 ; Iterative Fractals
 
@@ -70,7 +70,7 @@
 
 ; <Binding> := [<id>: <command>]
 ; A <command> is one of or a composition of commands from a defined list of actions.
-; Currently including: moving, drawing in color, rotating,
+; Currently including: moving, drawing in color, rotating, doing nothing,
 ; saving current position and rotation, returning to saved position and rotation
 
 ; parse-bindings: (-> <Binding> ...+ [HashOf Symbol [ListOf <command>]])
@@ -268,7 +268,7 @@
 ; Displays the fractal in an interactive window of the provided size,
 ; allowing the fractal to be iterated forwards and backwards
 ; (-> IFractal PosInt PosInt IFractal)
-(define (bang f w h)
+(define (render/interactive f w h)
   (world-state-fractal
    (big-bang (world-state f 0 (cons (render-frac f 0 w h) '()) w h)
     (on-draw draw-handler)
