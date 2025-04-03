@@ -8,16 +8,7 @@
 
 (define mand-etf (generate-etfractal mand-upd '2D))
 
-(render mand-etf simple-color
-        #:max-iterations 100
-        #:horizontal-bounds -1-0.5i 1+0.5i
-        #:vertical-bounds -1-0.5i 1+0.5i
-        #:window-width 600 #:window-height 600)
-
-;;Make sure bounds are being
-;;(with-colors ...
-;;  default-colors
-;; IF TIME ALLOWS : parallel
+(render mand-etf simple-color 100 [(bounds -2 2) (bounds -1.5+1.5i 1.5-1.5i)] 500 500)
 
 ;;The updater for a Burning Ship fractal
 (define burn-upd (λ (z c)
@@ -28,5 +19,4 @@
 
 ;;The updater for a Julia fractal
 (define julia-upd (λ (k) (λ (z _) (+ (* z z) k))))
-
 

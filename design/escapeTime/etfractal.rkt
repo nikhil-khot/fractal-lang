@@ -3,16 +3,17 @@
 (require (only-in 2htdp/image color-list->bitmap))
 (require racket/gui/base)
 (require (for-syntax syntax/parse))
+(require syntax-spec-v3)
 
 (provide
-  generate-etfractal
-  render
-  simple-color
-  simple-color-ratio)
+ generate-etfractal
+ render
+ simple-color
+ simple-color-ratio)
 
 ;;Represents the state of the rendering of the escape time fractal
-(define-struct world-state [image width height et-fractal max-iterations bounds] #:mutable)
-;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural)))
+(define-struct world-state [image width height et-fractal max-iterations bounds pixels-computed total-pixels] #:mutable)
+;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
 ;; and represent the state of the given escape time fractal
 ;; image - the state of the rendering of the fractal
 ;; width - The width of the window drawn to
@@ -20,6 +21,8 @@
 ;; et-fractal - The fractal information used for the state of the fractal
 ;; max-iterations - The max number of iterations that can be computed for a single point
 ;; bounds - The upper and lower bounds on the complex plane
+;; pixels-computed - The number of pixels that have been computed so far
+;; total-pixels - The total number of pixels to compute
 
 (define-struct et-fractal [updater dimension])
 ;;An ETFractal represents an escape time fractal with some updater which computes the value for each
@@ -29,7 +32,6 @@
 
 ;;Dimension is one of:
 ;; - 2D
-;; - 3D
 
 ;;Finds the number of steps it takes to escape to infinity given some updater
 ;;steps-to-inf: (-> Complex Complex Natural) Natural Natural WorldState
@@ -37,16 +39,19 @@
   (letrec
       ([width (world-state-width world)]
        [height (world-state-height world)]
-       [z-bounds (second (world-state-bounds world))]
-       [upper-z (second z-bounds)]
-       [lower-z (first z-bounds)]
+       [h-bounds (first (world-state-bounds world))]
+       [v-bounds (second (world-state-bounds world))]
+       [x-lower (first h-bounds)]
+       [x-upper (second h-bounds)]
+       [y-lower (first v-bounds)]
+       [y-upper (second v-bounds)]
        [complex-posn 
-        (+ (+ (real-part lower-z) 
-              (* (/ x width) 
-                 (- (real-part upper-z) (real-part lower-z)))
-              (* 0+1i (+ (imag-part lower-z) 
-                         (* (/ y height) 
-                            (- (imag-part upper-z) (imag-part lower-z)))))))]
+        (+ (* (/ x width) 
+              (- x-upper x-lower))
+           x-lower
+           (* 0+1i (+ y-lower
+                      (* (/ y height) 
+                         (- y-upper y-lower)))))]
        [find-steps (λ (z iteration)
                      (if (or (>= iteration (world-state-max-iterations world))
                              (> (magnitude z) 2))
@@ -62,28 +67,30 @@
   (λ (steps)
     (if (= steps max-iters)
         (make-color 0 0 0)
-        (make-color (min 255 (* 10 steps)) ;; 2/6
-                    (min 255 (* 5 steps))  ;; 1/6
-                    (min 255 (* 15 steps))))));3/6
+        (make-color (min 255 (* 10 steps))
+                    (min 255 (* 5 steps))
+                    (min 255 (* 15 steps))))))
 
 ;;Will create coloring rules based on the ratios the user supplies. The function returned will
-;;return the color that is assosicated with the given number of steps to infinity 
+;;return the color that is assosicated with the given number of steps to infinity. All of the
+;;ratios of each of the colors is relative to the other color values
 ;;simple-color-ratio: Decimal Decimal Decimal Natural (-> Natural Color)
 (define (simple-color-ratio r-ratio g-ratio b-ratio max-iters)
-  (if (> (+ r-ratio b-ratio g-ratio) 1)
-      ;;TODO: MAKE THE BELOW ERROR A COMPILE TIME ERR
-      (error "The given ratios of red green and blue values cannot be greater than 1!"
-             r-ratio g-ratio b-ratio)
-      (λ (steps)
-        (let
-            ([red (ceiling (* steps r-ratio 255))]
-             [green (ceiling (* steps g-ratio 255))]
-             [blue (ceiling (* steps b-ratio 255))])
-          (if (= steps max-iters)
-              (make-color 0 0 0)
-              (make-color (min 255 (ceiling red))
-                          (min 255 (ceiling green))
-                          (min 255 (ceiling blue))))))))
+  (let*
+      ([ratio-sum (+ r-ratio g-ratio b-ratio)]
+       [red-scalar (/ r-ratio ratio-sum)]
+       [green-scalar (/ g-ratio ratio-sum)]
+       [blue-scalar (/ b-ratio ratio-sum)])
+    (λ (steps)
+      (let
+          ([red (ceiling (* steps red-scalar 255))]
+           [green (ceiling (* steps green-scalar 255))]
+           [blue (ceiling (* steps blue-scalar 255))])
+        (if (= steps max-iters)
+            (make-color 0 0 0)
+            (make-color (min 255 (ceiling red))
+                        (min 255 (ceiling green))
+                        (min 255 (ceiling blue))))))))
 
 ;; Generates the image of the given fractal of the given state
 ;;draw-fractal: (-> (-> Complex Complex Integer)) (-> Natural (-> Natural Color)) WorldState
@@ -97,11 +104,78 @@
     (set-world-state-image! world bitmap)
     bitmap))
 
+;; Creates a loading screen bitmap with progress information
+;;create-loading-screen: Natural Natural WorldState -> bitmap%
+(define (create-loading-screen width height world)
+  (define bitmap (make-object bitmap% width height))
+  (define dc (make-object bitmap-dc% bitmap))
+  
+  (send dc set-pen "black" 1 'solid)
+  (send dc set-brush "black" 'solid)
+  (send dc draw-rectangle 0 0 width height)
+  
+  (draw-loading dc width height world)
+  bitmap)
+
+;;Draws the loading screen to satisfy low attention spanned users
+;;draw-loading: bitmap-dc% Natural Natural WorldState -> Void
+(define (draw-loading dc width height state)
+  (let* ([pixels-computed (world-state-pixels-computed state)]
+         [total-pixels (world-state-total-pixels state)]
+         [percentage (if (= total-pixels 0)
+                         0
+                         (floor (* 100 (/ pixels-computed total-pixels))))]
+         [loading-text (format "Computing fractal... ~a/~a pixels (~a%)" 
+                               pixels-computed 
+                               total-pixels
+                               percentage)])
+    (send dc set-font (make-object font% 20 'default 'normal 'bold))
+    
+    (define-values (text-width text-height _ __) 
+      (send dc get-text-extent loading-text))
+    
+    (send dc set-text-foreground "white")
+    (send dc draw-text loading-text 
+          (/ (- width text-width) 2)
+          (/ (- height text-height) 2))
+    
+    (draw-progress-bar dc width height text-width text-height state)))
+
+;;Draws the progress bar based on the number of pixels to be computed and the computed so far
+;;draw-progress-bar: bitmap-dc% Natural Natural Natural Natural WorldState -> Void
+(define (draw-progress-bar dc width height text-width text-height state)
+  (let* ([pixels-computed (world-state-pixels-computed state)]
+         [total-pixels (world-state-total-pixels state)]
+         [progress-width (max 10 (- width 100))]
+         [progress-height 20]
+         [progress-x (/ (- width progress-width) 2)]
+         [center-y (/ height 2)]
+         [progress-y (+ center-y (/ text-height 2) 20)])
+    
+    (send dc set-pen "white" 2 'solid)
+    (send dc set-brush "black" 'solid)
+    (send dc draw-rectangle progress-x progress-y progress-width progress-height)
+    
+    (send dc set-pen "blue" 1 'solid)
+    (send dc set-brush "blue" 'solid)
+    (define filled-width (inexact->exact
+                          (floor (* (/ pixels-computed total-pixels) progress-width))))
+    (when (> filled-width 0)
+      (send dc draw-rectangle
+            (+ progress-x 1)
+            (+ progress-y 1)
+            (max 1 (- filled-width 2))
+            (max 1 (- progress-height 2))))))
+
 ;;Creates a color for each of the pixels in the fractal image
 ;;generate-pixels: (-> (-> Complex Complex Integer)) (-> Natural (-> Natural Color)) Natural
 ;;                 Natural WorldState
 (define (generate-pixels etf-updater color-func width height world)
   (define bytes (make-bytes (* 4 width height)))
+  
+  ;;reset pixels-computed counter
+  (set-world-state-pixels-computed! world 0)
+  
   (for*/list ([x (range width)]
               [y (range height)])
     (let*
@@ -111,6 +185,9 @@
          [red (send color red)]
          [green (send color green)]
          [blue (send color blue)])
+      (set-world-state-pixels-computed! world (add1 (world-state-pixels-computed world)))
+      
+      ;;pixel color in the bytes array
       (bytes-set! bytes starting-idx 0)
       (bytes-set! bytes (+ starting-idx 1) red)
       (bytes-set! bytes (+ starting-idx 2) green)
@@ -132,7 +209,7 @@
                   world)))
 
 ;;Creates a new frame from the given color function and world state
-;; create-frame : (-> Natural (-> Natural Color)) WorldState
+;; create-frame : (-> Natural (-> Natural Color)) WorldState)
 (define (create-frame color world)
   (let* ([width (world-state-width world)]
          [height (world-state-height world)]
@@ -142,41 +219,163 @@
                              [label title]
                              [width width]
                              [height height])]
+         [is-calculating? #t]
+         [loading-bitmap (create-loading-screen width height world)]
+         
          [paint-callback (lambda (canvas dc)
-                           (send dc draw-bitmap (world-state-image world) 0 0)
-                           (define img (render-state color world))
-                           (send dc draw-bitmap img 0 0))]
+                           (if is-calculating?
+                               ;; Show loading screen while calculating
+                               (begin
+                                 (set! loading-bitmap (create-loading-screen width height world))
+                                 (send dc draw-bitmap loading-bitmap 0 0))
+                               (send dc draw-bitmap (world-state-image world) 0 0)))]
+         
          [display-canvas
           (new canvas%
                [parent display-frame]
                [paint-callback paint-callback])])
-    (send display-canvas refresh-now)	
-    (send display-frame show #t)))
+    
+    (send display-frame show #t)
+    (send display-canvas refresh-now)
+    
+    (define refresh-timer
+      (new timer%
+           [notify-callback
+            (lambda ()
+              (when is-calculating?
+                (send display-canvas refresh-now)))]
+           [interval 100]))
+    
+    ;;separate thread to compute the fractal
+    (thread
+     (lambda ()
+       (define img (render-state color world))
+       
+       (set! is-calculating? #f)
+       (send refresh-timer stop)
+       (send display-canvas refresh-now)))
+    display-frame))
 
-;; (render mandelbrot mand-color max-iterations [(bounds -2 2) (bounds -2i 2i)] 500 500)
-(define-syntax render
-  (λ (stx)
-    (syntax-parse stx
-      [(render et color max-iter [(_ x-lower x-upper)
-                                  (_ y-lower y-upper)] width height)
-       #'(create-frame color (make-world-state
-                              (make-object bitmap% width height)
-                              width
-                              height
-                              et
-                              max-iter
-                              (list
-                               (list x-lower x-upper)
-                               (list y-lower y-upper))))])))
+(define (imag-part-compare z1 z2)
+  (let ((imag1 (imag-part z1))
+        (imag2 (imag-part z2)))
+    (cond
+      [(< imag1 imag2) 'less-than]
+      [(> imag1 imag2) 'greater-than]
+      [else 'equal])))
 
 
+(syntax-spec
+ (host-interface/expression
+  (render et:expr color:expr 
+          #:max-iterations max-iter:expr
+          #:horizontal-bounds x-lower:expr x-upper:expr
+          #:vertical-bounds y-lower:expr y-upper:expr
+          #:window-width width:expr 
+          #:window-height height:expr)
+    
+  #`(begin
+      (for-each (λ (val name)
+                  (unless (complex? val)
+                    (error 'render "~a must be a complex number, got: ~v" name val)))
+                (list x-lower x-upper y-lower y-upper)
+                '("x-lower" "x-upper" "y-lower" "y-upper"))
+        
+      (displayln "Starting render...")
+      (create-frame color (make-world-state
+                           (make-object bitmap% width height)
+                           width height et max-iter
+                           (list (list x-lower x-upper)
+                                 (list y-lower y-upper))
+                           0
+                           (* width height))))))
 
 
-
-
-
-
-
-
-
-
+#;(syntax-spec 
+   (host-interface/expression
+    (render et:expr color:expr 
+            #:max-iterations max-iter:expr
+            [((~datum horizontal-bounds) x-lower:expr x-upper:expr)
+             ((~datum vertical-bounds) y-lower:expr y-upper:expr)]
+            #:window-width width:expr 
+            #:window-height height:expr)
+   
+    #`(begin
+        (for-each (λ (val name)
+                    (unless (complex? val)
+                      (error 'render "~a must be a complex number, got: ~v" name val)))
+                  (list x-lower x-upper y-lower y-upper)
+                  '("horizontal-lower-bound" "horizontal-upper-bound"
+                                             "vertical-lower-bound" "vertical-upper-bound"))
+        (unless (equal? (imag-part-compare x-lower x-upper) 'less-than)
+          (error 'render "~a must be strictly less than: ~v" x-lower x-upper))
+        (unless (equal? (imag-part-compare y-lower y-upper) 'less-than)
+          (error 'render "~a must be strictly less than: ~v" y-lower y-upper))
+                
+        (create-frame color (make-world-state
+                             (make-object bitmap% width height)
+                             width height et max-iter
+                             (list (list x-lower x-upper)
+                                   (list y-lower y-upper))
+                             0
+                             (* width height))))))
+  
+#;#;[(render et:expr (~datum default-colors)
+             #:max-iterations max-iter:expr
+             [((~datum horizontal-bounds) x-lower:expr x-upper:expr)
+              ((~datum vertical-bounds) y-lower:expr y-upper:expr)]
+             #:window-width width:expr 
+             #:window-height height:expr)
+   
+     #`(begin
+         (for-each (λ (val name)
+                     (unless (complex? val)
+                       (error 'render "~a must be a complex number, got: ~v" name val)))
+                   (list x-lower x-upper y-lower y-upper)
+                   '("horizontal-lower-bound" "horizontal-upper-bound"
+                                              "vertical-lower-bound" "vertical-upper-bound"))
+         (unless (equal? (imag-part-compare x-lower x-upper) 'less-than)
+           (error 'render "~a must be strictly less than: ~v" x-lower x-upper))
+         (unless (equal? (imag-part-compare y-lower y-upper) 'less-than)
+           (error 'render "~a must be strictly less than: ~v" y-lower y-upper))
+                
+         (create-frame default-colors-func  
+                       (make-world-state
+                        (make-object bitmap% width height)
+                        width height et max-iter
+                        (list (list x-lower x-upper)
+                              (list y-lower y-upper))
+                        0
+                        (* width height))))]
+  
+[(render et:expr ((~datum use-colors)
+                  ((~datum red) red-value)
+                  ((~datum green) green-value)
+                  ((~datum blue) blue-value)) 
+         #:max-iterations max-iter:expr
+         [((~datum horizontal-bounds) x-lower:expr x-upper:expr)
+          ((~datum vertical-bounds) y-lower:expr y-upper:expr)]
+         #:window-width width:expr 
+         #:window-height height:expr)
+   
+ #`(begin
+     (for-each (λ (val name)
+                 (unless (complex? val)
+                   (error 'render "~a must be a complex number, got: ~v" name val)))
+               (list x-lower x-upper y-lower y-upper)
+               '("horizontal-lower-bound" "horizontal-upper-bound"
+                                          "vertical-lower-bound" "vertical-upper-bound"))
+     (unless (equal? (imag-part-compare x-lower x-upper) 'less-than)
+       (error 'render "~a must be strictly less than: ~v" x-lower x-upper))
+     (unless (equal? (imag-part-compare y-lower y-upper) 'less-than)
+       (error 'render "~a must be strictly less than: ~v" y-lower y-upper))
+       
+     (create-frame
+      (simple-color-ratio red-value green-value blue-value max-iter)
+      (make-world-state
+       (make-object bitmap% width height)
+       width height et max-iter
+       (list (list x-lower x-upper)
+             (list y-lower y-upper))
+       0
+       (* width height))))]
