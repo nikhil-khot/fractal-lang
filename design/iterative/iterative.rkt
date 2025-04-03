@@ -17,8 +17,6 @@
 (define-struct ifractal [bindings state transformations is-2D])
 ; (ifractal [HashOf Bindings] (ListOf <State>) [HashOf <Transformation>] Boolean)
 
-(define-struct turt [turtle stack])
-
 ; <L-System> := [(<Binding> ...+) [<State>] (<Transformation> ...)]
 (begin-for-syntax
   (define-syntax-class binding
@@ -53,26 +51,30 @@
        #'(let ([parsed-binds (parse-bindings binds ...)]
                [parsed-state (parse-state state)]
                [parsed-transforms (parse-transforms transforms ... binds.x ...)])
-           (check-bindings parsed-binds parsed-state (list 'transforms.x ...) (hash-values parsed-transforms))
+           (check-bindings (list 'binds.x ...) parsed-state (list 'transforms.x ...) (hash-values parsed-transforms))
            (ifractal parsed-binds parsed-state parsed-transforms '2D))])))
 
 (define (check-bindings binds state t-keys t-vals)
-  (andmap (λ (l) (unless (member l (hash-keys binds))
+  (andmap (λ (l) (unless (member l binds)
                    (error "Undefined identifier in initial state:" l)))
           state)
-  (andmap (λ (l) (unless (member l (hash-keys binds))
+  (andmap (λ (l) (unless (member l binds)
                    (error "Undefined identifier in transforms - keys:" l)))
           t-keys)
   (andmap (λ (los)
-            (andmap (λ (l) (unless (member l (hash-keys binds))
+            (andmap (λ (l) (unless (member l binds)
                              (error "Undefined identifier in transforms - values:" l)))
-                    los)) t-vals))
+                    los)) t-vals)
+  (andmap (λ (l1) (unless (= 1 (length (filter (λ (l2) (symbol=? l1 l2)) binds)))
+                    (error "Duplicate binding:" l1))) binds)
+  (andmap (λ (l1) (unless (= 1 (length (filter (λ (l2) (symbol=? l1 l2)) t-keys)))
+                    (error "Duplicate transformation key:" l1))) t-keys))
   
 
 ; <Binding> := [<id>: <command>]
 ; A <command> is one of or a composition of commands from a defined list of actions.
-; Currently including: moving, drawing in color, and rotating
-; TODO: Saving location, returning to location
+; Currently including: moving, drawing in color, rotating,
+; saving current position and rotation, returning to saved position and rotation
 
 ; parse-bindings: (-> <Binding> ...+ [HashOf Symbol [ListOf <command>]])
 (define-syntax parse-bindings
@@ -84,24 +86,38 @@
                      [b (list (parse-commands binds.f) ...)])
             (cons i b)))])))
 
+(define-struct turtle-window [turtle stack])
+; (turtle-window Turtle [ListOf [VectorOf Real Real Real]]) 
+
 (define-syntax parse-commands
   (lambda (stx)
     (syntax-parse stx
-      [(_ ((~datum draw) x:number color:string)) #'(λ (t) (turt (draw x (set-pen-color (turt-turtle t) color))
-                                                              (turt-stack t)))]
-      [(_ ((~datum move) x:number)) #'(λ (t) (turt (move x (turt-turtle t))
-                                                 (turt-stack t)))]
-      [(_ ((~datum turn) x:number)) #'(λ (t) (turt (turn x (turt-turtle t))
-                                                 (turt-stack t)))]
-      [(_ ((~datum save))) #'(λ (t) (turt (turt-turtle t)
-                                               (cons (turtle-state (turt-turtle t)) (turt-stack t))))]
-      [(_ ((~datum return))) #'(λ (t) (if (cons? (turt-stack t))
-                                               (turt (restore-turtle-state (turt-turtle t) (first (turt-stack t)))
-                                                 (rest (turt-stack t)))
-                                               (error "No saved turtles")))]
+      [(_ ((~datum draw) x:number color:string))
+       #'(λ (t) (turtle-window
+                 (draw x (set-pen-color (turtle-window-turtle t) color))
+                 (turtle-window-stack t)))]
+      [(_ ((~datum move) x:number))
+       #'(λ (t) (turtle-window
+                 (move x (turtle-window-turtle t))
+                 (turtle-window-stack t)))]
+      [(_ ((~datum turn) x:number))
+       #'(λ (t) (turtle-window
+                 (turn x (turtle-window-turtle t))
+                 (turtle-window-stack t)))]
+      [(_ ((~datum save)))
+       #'(λ (t) (turtle-window
+                 (turtle-window-turtle t)
+                 (cons (turtle-state (turtle-window-turtle t)) (turtle-window-stack t))))]
+      [(_ ((~datum return)))
+       #'(λ (t) (if (cons? (turtle-window-stack t))
+                    (turtle-window
+                     (restore-turtle-state (turtle-window-turtle t) (first (turtle-window-stack t)))
+                     (rest (turtle-window-stack t)))
+                    (error "No saved turtles")))]
       [(_ ((~datum none))) #'(λ (t) t)]
-      [(_ ((~datum combine) c:command ...+)) #'(let ([commands (list (parse-commands c) ...)])
-                                                 (λ (t) (foldl (λ (command t) (command t)) t commands)))])))
+      [(_ ((~datum combine) c:command ...+))
+       #'(let ([commands (list (parse-commands c) ...)])
+           (λ (t) (foldl (λ (command t) (command t)) t commands)))])))
 
 ; <State> := <id>
 ;          | <id><State>
@@ -171,6 +187,14 @@
              (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
              [B]
              ([A -> AB] [B -> CB])])))
+  (check-exn #rx"Duplicate binding: 'B"
+             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)] [B : (turn 90)])
+             [B]
+             ([A -> AB] [B -> BB])])))
+  (check-exn #rx"Duplicate transformation key: 'A"
+             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
+             [B]
+             ([A -> AB] [B -> BB] [A -> AB])])))
   (check-equal? '(A B C B C) (parse-state ABCBC))
   (check-equal? '(A B) (hash-ref (parse-transforms [A -> AB] A B) 'A))
   (check-equal? '(B) (hash-ref (parse-transforms [A -> AB] A B) 'B))
@@ -188,27 +212,29 @@
 ; Renders the provided IFractal (iterated iters times) as a Pict
 (define (render ifractal iters height width)
   (let* ([frac (iterate ifractal iters)]
-         [turtle (turt (turtles width height) '())]
+         [turtle (turtle-window (turtles width height) '())]
          [img (draw-state (ifractal-state frac) (ifractal-bindings frac) turtle)])
     (cc-superimpose
      (scale-to-fit img
                    (min width (* 10 (pict-width img))) (min height (* 10 (pict-height img))))
      (blank width height))))
 
-; draw-state: (-> (ListOf <State>) [HashOf <Bindings>] Turt Pict)
+; draw-state: (-> (ListOf <State>) [HashOf <Bindings>] TurtleWindow Pict)
 ; D=Recursively executes the turtle commands bound to each state value
 (define (draw-state states bindings turtle)
   (if (empty? states)
-      (turtles-pict (turt-turtle turtle))
+      (turtles-pict (turtle-window-turtle turtle))
       (draw-state (rest states)
                   bindings
                   ((hash-ref bindings (first states)) turtle))))
 
 
-; Struct to hold the fractal, current iteration, and previous iterations
+; Represents the state of rendering an iterative fractal
 (define-struct world-state [fractal iter imgs width height])
+; (world-state IFractal PosInt [ListOf Bitmap] PosInt PosInt)
 
 ; Renders the fractal, shows the iteration number, and turns it into a bitmap for big-bang to use
+; (-> IFractal PosInt PosInt PosInt Bitmap)
 (define (render-frac f iter width height)
   (let ([img (render f 0 width height)])
     (pict->bitmap
@@ -217,30 +243,37 @@
                 img))))
 
 ; Accesses the corresponding bitmap for the current fractal iteration
-(define (draw-handler f)
-  (list-ref (world-state-imgs f) (- (length (world-state-imgs f))
-                                    (add1 (world-state-iter f)))))
+; (-> WorldState Bitmap)
+(define (draw-handler w)
+  (list-ref (world-state-imgs w) (- (length (world-state-imgs w))
+                                    (add1 (world-state-iter w)))))
 
-(define (key-handler f ke)
+; Iterates fractals forwards/backwards
+; (-> WorldState WorldState)
+(define (key-handler w ke)
   (cond [(key=? ke "left")
-         (if (zero? (world-state-iter f))
-             f
-             (world-state (world-state-fractal f) (sub1 (world-state-iter f)) (world-state-imgs f)
-                          (world-state-width f) (world-state-height f)))]
-        [(key=? ke "right") (if (= (length (world-state-imgs f)) (add1 (world-state-iter f)))
-                                (let ([new-frac (iterate (world-state-fractal f) 1)])
-                                  (world-state new-frac (add1 (world-state-iter f))
-                                               (cons (render-frac new-frac (add1 (world-state-iter f))
-                                                                  (world-state-width f) (world-state-height f))
-                                                     (world-state-imgs f))
-                                               (world-state-width f) (world-state-height f)))
-                                (world-state (world-state-fractal f) (add1 (world-state-iter f)) (world-state-imgs f)
-                                             (world-state-width f) (world-state-height f)))]
-        [else f]))
+         (if (zero? (world-state-iter w))
+             w
+             (world-state (world-state-fractal w) (sub1 (world-state-iter w)) (world-state-imgs w)
+                          (world-state-width w) (world-state-height w)))]
+        [(key=? ke "right")
+         (if (= (length (world-state-imgs w)) (add1 (world-state-iter w)))
+             (let ([new-frac (iterate (world-state-fractal w) 1)])
+               (world-state new-frac (add1 (world-state-iter w))
+                            (cons (render-frac new-frac (add1 (world-state-iter w))
+                                               (world-state-width w) (world-state-height w))
+                                  (world-state-imgs w))
+                            (world-state-width w) (world-state-height w)))
+             (world-state (world-state-fractal w) (add1 (world-state-iter w)) (world-state-imgs w)
+                          (world-state-width w) (world-state-height w)))]
+        [else w]))
 
+
+; Displays the fractal in an interactive window of the provided size,
+; allowing the fractal to be iterated forwards and backwards
+; (-> IFractal PosInt PosInt IFractal)
 (define (bang f w h)
   (world-state-fractal
    (big-bang (world-state f 0 (cons (render-frac f 0 w h) '()) w h)
     (on-draw draw-handler)
     (on-key key-handler))))
-
