@@ -12,7 +12,7 @@
  simple-color-ratio)
 
 ;;Represents the state of the rendering of the escape time fractal
-(define-struct world-state [image width height et-fractal max-iterations bounds pixels-computed total-pixels] #:mutable)
+(define-struct world-state [image width height et-fractal max-iterations escape-bounds bounds pixels-computed total-pixels] #:mutable)
 ;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
 ;; and represent the state of the given escape time fractal
 ;; image - the state of the rendering of the fractal
@@ -54,7 +54,7 @@
                          (- y-upper y-lower)))))]
        [find-steps (λ (z iteration)
                      (if (or (>= iteration (world-state-max-iterations world))
-                             (> (magnitude z) 2))
+                             (> (magnitude z) (world-state-escape-bounds world)))
                          iteration
                          (find-steps (et-fractal-update z complex-posn) (add1 iteration))))])
     (find-steps 0+0i 0)))
@@ -269,6 +269,7 @@
  (host-interface/expression
   (render et:expr color:expr 
           #:max-iterations max-iter:expr
+          #:escape-bounds escape-bounds:expr
           #:horizontal-bounds x-lower:expr x-upper:expr
           #:vertical-bounds y-lower:expr y-upper:expr
           #:window-width width:expr 
@@ -284,7 +285,7 @@
       (displayln "Starting render...")
       (create-frame color (make-world-state
                            (make-object bitmap% width height)
-                           width height et max-iter
+                           width height et max-iter escape-bounds
                            (list (list x-lower x-upper)
                                  (list y-lower y-upper))
                            0
