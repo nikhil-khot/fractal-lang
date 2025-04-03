@@ -6,12 +6,13 @@
 ;;The updater for a Mandelbrot fractal
 (define mand-upd (λ (z c) (+ (* z z) c)))
 
-(define mand-etf (generate-etfractal mand-upd '2D))
+(define mand-etf (generate-etfractal mand-upd))
 
 (render mand-etf simple-color
         #:max-iterations 100
         #:escape-bounds 2
-        #:horizontal-bounds -1-0.5i 1+0.5i
+        -1-0.5i
+        #:horizontal-bounds  1+0.5i
         #:vertical-bounds -1-0.5i 1+0.5i
         #:window-width 600 #:window-height 600)
 
@@ -27,7 +28,7 @@
                        (make-rectangular (abs (real-part z)) (abs (imag-part z)))) 
                     c)))
 
-(define burn-etf (generate-etfractal burn-upd '2D))
+(define burn-etf (generate-etfractal burn-upd))
 
 #;(render burn-etf simple-color
         #:max-iterations 100

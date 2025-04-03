@@ -24,14 +24,9 @@
 ;; pixels-computed - The number of pixels that have been computed so far
 ;; total-pixels - The total number of pixels to compute
 
-(define-struct et-fractal [updater dimension])
+(define-struct et-fractal [updater])
 ;;An ETFractal represents an escape time fractal with some updater which computes the value for each
-;;position and the dimension that the fractal will be represented in.
-;;
-;;NOTE: Currently the dimension field is ignored
-
-;;Dimension is one of:
-;; - 2D
+;;position
 
 ;;Finds the number of steps it takes to escape to infinity given some updater
 ;;steps-to-inf: (-> Complex Complex Natural) Natural Natural WorldState
@@ -195,9 +190,9 @@
   bytes)
 
 ;;A convienence function to make a new et-fractal
-;;generate-etfractal: (-> (-> Complex Complex Integer)) Dimension)
-(define (generate-etfractal updater dimension)
-  (make-et-fractal updater dimension))
+;;generate-etfractal: (-> (-> Complex Complex Integer)) ETFractal)
+(define (generate-etfractal updater)
+  (make-et-fractal updater))
 
 ;;Will render the current state
 ;;render-state: (-> Natural (-> Natural Color)) Image
@@ -256,127 +251,24 @@
        (send display-canvas refresh-now)))
     display-frame))
 
-(define (imag-part-compare z1 z2)
-  (let ((imag1 (imag-part z1))
-        (imag2 (imag-part z2)))
-    (cond
-      [(< imag1 imag2) 'less-than]
-      [(> imag1 imag2) 'greater-than]
-      [else 'equal])))
-
-
-(syntax-spec
- (host-interface/expression
-  (render et:expr color:expr 
-          #:max-iterations max-iter:expr
-          #:escape-bounds escape-bounds:expr
-          #:horizontal-bounds x-lower:expr x-upper:expr
-          #:vertical-bounds y-lower:expr y-upper:expr
-          #:window-width width:expr 
-          #:window-height height:expr)
-    
-  #`(begin
+(define (render etf color-func 
+          #:max-iterations max-iter
+          #:escape-bounds escape-bounds
+          #:horizontal-bounds x-lower x-upper
+          #:vertical-bounds y-lower y-upper
+          #:window-width width 
+          #:window-height height)
+  (begin
       (for-each (λ (val name)
                   (unless (complex? val)
                     (error 'render "~a must be a complex number, got: ~v" name val)))
                 (list x-lower x-upper y-lower y-upper)
                 '("x-lower" "x-upper" "y-lower" "y-upper"))
-        
-      (displayln "Starting render...")
-      (create-frame color (make-world-state
+      (create-frame color-func (make-world-state
                            (make-object bitmap% width height)
-                           width height et max-iter escape-bounds
+                           width height etf max-iter escape-bounds
                            (list (list x-lower x-upper)
                                  (list y-lower y-upper))
                            0
-                           (* width height))))))
+                           (* width height)))))
 
-
-#;(syntax-spec 
-   (host-interface/expression
-    (render et:expr color:expr 
-            #:max-iterations max-iter:expr
-            [((~datum horizontal-bounds) x-lower:expr x-upper:expr)
-             ((~datum vertical-bounds) y-lower:expr y-upper:expr)]
-            #:window-width width:expr 
-            #:window-height height:expr)
-   
-    #`(begin
-        (for-each (λ (val name)
-                    (unless (complex? val)
-                      (error 'render "~a must be a complex number, got: ~v" name val)))
-                  (list x-lower x-upper y-lower y-upper)
-                  '("horizontal-lower-bound" "horizontal-upper-bound"
-                                             "vertical-lower-bound" "vertical-upper-bound"))
-        (unless (equal? (imag-part-compare x-lower x-upper) 'less-than)
-          (error 'render "~a must be strictly less than: ~v" x-lower x-upper))
-        (unless (equal? (imag-part-compare y-lower y-upper) 'less-than)
-          (error 'render "~a must be strictly less than: ~v" y-lower y-upper))
-                
-        (create-frame color (make-world-state
-                             (make-object bitmap% width height)
-                             width height et max-iter
-                             (list (list x-lower x-upper)
-                                   (list y-lower y-upper))
-                             0
-                             (* width height))))))
-  
-#;#;[(render et:expr (~datum default-colors)
-             #:max-iterations max-iter:expr
-             [((~datum horizontal-bounds) x-lower:expr x-upper:expr)
-              ((~datum vertical-bounds) y-lower:expr y-upper:expr)]
-             #:window-width width:expr 
-             #:window-height height:expr)
-   
-     #`(begin
-         (for-each (λ (val name)
-                     (unless (complex? val)
-                       (error 'render "~a must be a complex number, got: ~v" name val)))
-                   (list x-lower x-upper y-lower y-upper)
-                   '("horizontal-lower-bound" "horizontal-upper-bound"
-                                              "vertical-lower-bound" "vertical-upper-bound"))
-         (unless (equal? (imag-part-compare x-lower x-upper) 'less-than)
-           (error 'render "~a must be strictly less than: ~v" x-lower x-upper))
-         (unless (equal? (imag-part-compare y-lower y-upper) 'less-than)
-           (error 'render "~a must be strictly less than: ~v" y-lower y-upper))
-                
-         (create-frame default-colors-func  
-                       (make-world-state
-                        (make-object bitmap% width height)
-                        width height et max-iter
-                        (list (list x-lower x-upper)
-                              (list y-lower y-upper))
-                        0
-                        (* width height))))]
-  
-[(render et:expr ((~datum use-colors)
-                  ((~datum red) red-value)
-                  ((~datum green) green-value)
-                  ((~datum blue) blue-value)) 
-         #:max-iterations max-iter:expr
-         [((~datum horizontal-bounds) x-lower:expr x-upper:expr)
-          ((~datum vertical-bounds) y-lower:expr y-upper:expr)]
-         #:window-width width:expr 
-         #:window-height height:expr)
-   
- #`(begin
-     (for-each (λ (val name)
-                 (unless (complex? val)
-                   (error 'render "~a must be a complex number, got: ~v" name val)))
-               (list x-lower x-upper y-lower y-upper)
-               '("horizontal-lower-bound" "horizontal-upper-bound"
-                                          "vertical-lower-bound" "vertical-upper-bound"))
-     (unless (equal? (imag-part-compare x-lower x-upper) 'less-than)
-       (error 'render "~a must be strictly less than: ~v" x-lower x-upper))
-     (unless (equal? (imag-part-compare y-lower y-upper) 'less-than)
-       (error 'render "~a must be strictly less than: ~v" y-lower y-upper))
-       
-     (create-frame
-      (simple-color-ratio red-value green-value blue-value max-iter)
-      (make-world-state
-       (make-object bitmap% width height)
-       width height et max-iter
-       (list (list x-lower x-upper)
-             (list y-lower y-upper))
-       0
-       (* width height))))]
