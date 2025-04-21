@@ -1,0 +1,1 @@
+("8.15" ta6le ("c813aa74ff4e31c7dea56c9e1f7b7ba2d69927a8" . "ba36cef935fbee1fdae854df37ec9e12da2348e8") (collects #"2htdp" #"image.rkt") (collects #"racket" #"gui" #"base.rkt") (collects #"racket" #"main.rkt") (collects #"racket" #"runtime-config.rkt") (collects #"syntax" #"parse.rkt"))
