@@ -72,8 +72,10 @@
                     (error "Duplicate transformation key:" l1))) t-keys)))
 
 (define-for-syntax (id->symb-list x)
-  (for/list ([char (string->list (symbol->string (syntax-e x)))])
-    (string->symbol (string char))))
+  (let ([sym (syntax-e x)])
+    (unless (symbol? sym) (error "Not a symbol:" sym))
+  (for/list ([char (string->list (symbol->string sym))])
+    (string->symbol (string char)))))
   
 
 ; <Binding> := [<id>: <command>]
@@ -94,35 +96,59 @@
 (define-struct turtle-window [turtle stack])
 ; (turtle-window Turtle [ListOf [VectorOf Real Real Real]]) 
 
+; parse-commands: (-> <command> (-> TurtleWindow TurtleWindow)z)
 (define-syntax parse-commands
   (lambda (stx)
     (syntax-parse stx
       [(_ ((~datum draw) x:number color:string))
-       #'(λ (t) (turtle-window
-                 (draw x (set-pen-color (turtle-window-turtle t) color))
-                 (turtle-window-stack t)))]
+       #'(draw/window x color)]
       [(_ ((~datum move) x:number))
-       #'(λ (t) (turtle-window
-                 (move x (turtle-window-turtle t))
-                 (turtle-window-stack t)))]
+       #'(move/window x)]
       [(_ ((~datum turn) x:number))
-       #'(λ (t) (turtle-window
-                 (turn x (turtle-window-turtle t))
-                 (turtle-window-stack t)))]
+       #'(turn/window x)]
       [(_ ((~datum save)))
-       #'(λ (t) (turtle-window
-                 (turtle-window-turtle t)
-                 (cons (turtle-state (turtle-window-turtle t)) (turtle-window-stack t))))]
+       #'(save/window)]
       [(_ ((~datum return)))
-       #'(λ (t) (if (cons? (turtle-window-stack t))
-                    (turtle-window
-                     (restore-turtle-state (turtle-window-turtle t) (first (turtle-window-stack t)))
-                     (rest (turtle-window-stack t)))
-                    (error "No saved turtles")))]
+       #'(return/window)]
       [(_ ((~datum none))) #'(λ (t) t)]
       [(_ ((~datum combine) c:command ...+))
        #'(let ([commands (list (parse-commands c) ...)])
            (λ (t) (foldl (λ (command t) (command t)) t commands)))])))
+
+; draw/window: (-> Number Color (-> TurtleWindow TurtleWindow))
+(define (draw/window num color)
+  (λ (t)
+    (turtle-window
+     (draw num (set-pen-color (turtle-window-turtle t) color))
+     (turtle-window-stack t))))
+
+; move/window: (-> Number (-> TurtleWindow TurtleWindow))
+(define (move/window num)
+  (λ (t)
+    (turtle-window
+     (move num (turtle-window-turtle t))
+     (turtle-window-stack t))))
+
+; turn/window: (-> Number (-> TurtleWindow TurtleWindow))
+(define (turn/window num)
+  (λ (t)
+    (turtle-window
+     (turn num (turtle-window-turtle t))
+     (turtle-window-stack t))))
+
+; draw/window: (-> (-> TurtleWindow TurtleWindow))
+(define (save/window)
+  (λ (t) (turtle-window
+                 (turtle-window-turtle t)
+                 (cons (turtle-state (turtle-window-turtle t)) (turtle-window-stack t)))))
+
+; draw/window: (-> (-> TurtleWindow TurtleWindow))
+(define (return/window)
+  (λ (t) (if (cons? (turtle-window-stack t))
+                    (turtle-window
+                     (restore-turtle-state (turtle-window-turtle t) (first (turtle-window-stack t)))
+                     (rest (turtle-window-stack t)))
+                    (error "No saved turtles"))))
 
 ; <State> := <id>
 ;          | <id><State>
