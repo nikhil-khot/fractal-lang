@@ -57,4 +57,4 @@ See more examples in the respective folders under the "fractals" directory.
 
 ## Full Documentation
 
-The full documentation for this langauge can be found in the scribl file or in ```/fractals/design.md```
+The full documentation for this langauge can be found in the scribble page or in ```/fractals/design.md```

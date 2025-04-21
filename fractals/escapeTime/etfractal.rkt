@@ -203,7 +203,7 @@
                   world)))
 
 ;;Creates a new frame from the given color function and world state
-;; create-frame : (-> Natural (-> Natural Color)) WorldState)
+;; create-frame : (-> Natural (-> Natural Color)) Frame%)
 (define (create-frame color world)
   (let* ([width (world-state-width world)]
          [height (world-state-height world)]
@@ -223,7 +223,6 @@
                                  (set! loading-bitmap (create-loading-screen width height world))
                                  (send dc draw-bitmap loading-bitmap 0 0))
                                (send dc draw-bitmap (world-state-image world) 0 0)))]
-         
          [display-canvas
           (new canvas%
                [parent display-frame]
