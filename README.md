@@ -51,4 +51,10 @@ See more examples in the respective folders under the "fractals" directory.
 
     Whet their appetite with a small but compelling example. Point out how the benefits of your DSL show up in the example.
 
-    Provide instructions for installing the DSL and accessing the full documentation
+## Installation Guide
+
+...
+
+## Full Documentation
+
+The full documentation for this langauge can be found in the scribl file or in ```/fractals/design.md```
