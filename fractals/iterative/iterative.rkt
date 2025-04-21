@@ -45,27 +45,35 @@
   (lambda (stx)
     (syntax-parse stx
       [(_ [(binds:binding ...+) [state:id] (transforms:transform ...)])
+       (check-ids #'(binds.x ...) #'state #'(transforms.x ...)  #'(transforms.y ...))
        #'(let ([parsed-binds (parse-bindings binds ...)]
                [parsed-state (parse-state state)]
                [parsed-transforms (parse-transforms transforms ... binds.x ...)])
-           (check-bindings (list 'binds.x ...) parsed-state (list 'transforms.x ...) (hash-values parsed-transforms))
            (ifractal parsed-binds parsed-state parsed-transforms))])))
 
-(define (check-bindings binds state t-keys t-vals)
-  (andmap (λ (l) (unless (member l binds)
+(define-for-syntax (check-ids binds state t-keys t-vals)
+  (let ([binds (map syntax-e (syntax-e binds))]
+        [state (id->symb-list state)]
+        [t-keys (map syntax-e (syntax-e t-keys))]
+        [t-vals (map id->symb-list (syntax-e t-vals))])
+    (andmap (λ (l) (unless (member l binds)
                    (error "Undefined identifier in initial state:" l)))
           state)
-  (andmap (λ (l) (unless (member l binds)
-                   (error "Undefined identifier in transforms - keys:" l)))
-          t-keys)
-  (andmap (λ (los)
+    (andmap (λ (l) (unless (member l binds)
+                     (error "Undefined identifier in transforms - keys:" l)))
+            t-keys)
+    (andmap (λ (los)
             (andmap (λ (l) (unless (member l binds)
                              (error "Undefined identifier in transforms - values:" l)))
                     los)) t-vals)
-  (andmap (λ (l1) (unless (= 1 (length (filter (λ (l2) (symbol=? l1 l2)) binds)))
+    (andmap (λ (l1) (unless (= 1 (length (filter (λ (l2) (equal? l1 l2)) binds)))
                     (error "Duplicate binding:" l1))) binds)
-  (andmap (λ (l1) (unless (= 1 (length (filter (λ (l2) (symbol=? l1 l2)) t-keys)))
-                    (error "Duplicate transformation key:" l1))) t-keys))
+    (andmap (λ (l1) (unless (= 1 (length (filter (λ (l2) (equal? l1 l2)) t-keys)))
+                    (error "Duplicate transformation key:" l1))) t-keys)))
+
+(define-for-syntax (id->symb-list x)
+  (for/list ([char (string->list (symbol->string (syntax-e x)))])
+    (string->symbol (string char))))
   
 
 ; <Binding> := [<id>: <command>]
@@ -123,8 +131,9 @@
 (define-syntax parse-state
   (lambda (stx)
     (syntax-parse stx
-      [(_ x:id) #'(for/list ([char (string->list (symbol->string 'x))])
-                      (string->symbol (string char)))]
+      [(_ x:id) (let ([state (id->symb-list #'x)])
+                  #'(for/list ([char (string->list (symbol->string 'x))])
+                      (string->symbol (string char))))]
       [(_) #'()])))
   
 ; <Transformation> := [<id> -> <State>]
@@ -164,33 +173,47 @@
 
 (module+ test
   (check-exn #rx"Can only use binding identifiers of length 1"
-             (lambda () (convert-compile-time-error (generate-ifractal [([AB : (draw 1 "white")])
-             [AB]
-             ([AB -> ABAB])]))))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([AB : (draw 1 "white")])
+                                    [AB]
+                                    ([AB -> ABAB])]))))
   (check-exn #rx"Can only transform identifiers of length 1"
-             (lambda () (convert-compile-time-error (generate-ifractal [([A : (draw 1 "white")] [B : (draw 1 "white")])
-             [A]
-             ([AB -> ABAB])]))))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([A : (draw 1 "white")] [B : (draw 1 "white")])
+                                    [A]
+                                    ([AB -> ABAB])]))))
   (check-exn #rx"Undefined identifier in initial state: 'C"
-             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
-             [C]
-             ([A -> AB] [B -> AB])])))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
+                                    [C]
+                                    ([A -> AB] [B -> AB])]))))
   (check-exn #rx"Undefined identifier in transforms - keys: 'C"
-             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
-             [A]
-             ([C -> AB] [B -> AB])])))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
+                                    [A]
+                                    ([C -> AB] [B -> AB])]))))
   (check-exn #rx"Undefined identifier in transforms - values: 'C"
-             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
-             [B]
-             ([A -> AB] [B -> CB])])))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
+                                    [B]
+                                    ([A -> AB] [B -> CB])]))))
   (check-exn #rx"Duplicate binding: 'B"
-             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)] [B : (turn 90)])
-             [B]
-             ([A -> AB] [B -> BB])])))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)] [B : (turn 90)])
+                                    [B]
+                                    ([A -> AB] [B -> BB])]))))
   (check-exn #rx"Duplicate transformation key: 'A"
-             (lambda () (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
-             [B]
-             ([A -> AB] [B -> BB] [A -> AB])])))
+             (lambda ()
+               (convert-compile-time-error
+                (generate-ifractal [([A : (draw 1 "white")] [B : (turn 90)])
+                                    [B]
+                                    ([A -> AB] [B -> BB] [A -> AB])]))))
   (check-equal? '(A B C B C) (parse-state ABCBC))
   (check-equal? '(A B) (hash-ref (parse-transforms [A -> AB] A B) 'A))
   (check-equal? '(B) (hash-ref (parse-transforms [A -> AB] A B) 'B))
@@ -273,3 +296,4 @@
    (big-bang (world-state f 0 (cons (render-frac f 0 w h) '()) w h)
     (on-draw draw-handler)
     (on-key key-handler))))
+
