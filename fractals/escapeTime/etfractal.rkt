@@ -8,7 +8,9 @@
  generate-etfractal
  render
  simple-color
- simple-color-ratio)
+ simple-color-ratio
+ point-in-set?
+ steps-to-escape)
 
 ;;Represents the state of the rendering of the escape time fractal
 (define-struct world-state [image width height et-fractal max-iterations escape-bounds bounds pixels-computed total-pixels] #:mutable)
@@ -27,6 +29,17 @@
 ;;An ETFractal represents an escape time fractal with some updater which computes the value for each
 ;;position
 
+(define (num-steps complex-posn z iteration fractal-updater max-iters escape-bound)
+(if (or (>= iteration max-iters)
+                             (> (magnitude z) escape-bound))
+                         iteration
+                         (num-steps complex-posn 
+                                    (fractal-updater z complex-posn)
+                                    (add1 iteration)
+                                    fractal-updater
+                                    max-iters
+                                    escape-bound)))
+
 ;;Finds the number of steps it takes to escape to infinity given some updater
 ;;steps-to-inf: (-> Complex Complex Natural) Natural Natural WorldState
 (define (steps-to-inf et-fractal-update x y world)
@@ -39,6 +52,8 @@
        [x-upper (second h-bounds)]
        [y-lower (first v-bounds)]
        [y-upper (second v-bounds)]
+       [escape-bound (world-state-escape-bounds world)]
+       [max-iters (world-state-max-iterations world)]
        [complex-posn 
         (+ (* (/ x width) 
               (- x-upper x-lower))
@@ -51,8 +66,25 @@
                              (> (magnitude z) (world-state-escape-bounds world)))
                          iteration
                          (find-steps (et-fractal-update z complex-posn) (add1 iteration))))])
-    (find-steps 0+0i 0)))
+    (num-steps complex-posn 0+0i 0 et-fractal-update max-iters escape-bound)
+    #;(find-steps 0+0i 0)))
 
+;;Determines if the given complex point is in the set of points of the escape-time fractal given the
+;;bound which defines the magnitude which is consider to be infinity
+;;point-in-set?: (-> ETFractal Complex Natural Natural Boolean)
+(define (point-in-set? etf point max-iters escape-bound)
+  (let ([fractal-updater (et-fractal-updater etf)])
+   (= max-iters (num-steps point 0+0i 0 fractal-updater max-iters escape-bound))))
+  
+;;Determines the number of steps to escape for some point on the complex plane. Will return
+;;false if the point does not escape in the maximum number of steps given.
+;;steps-to-escape: (-> ETFractal Complex Natural Natural (Maybe Natural))
+(define (steps-to-escape etf point max-steps escape-bound)
+(let* ([fractal-updater (et-fractal-updater etf)]
+       [steps (num-steps point 0+0i 0 fractal-updater max-steps escape-bound)])
+  (if (= steps max-steps)
+    #f
+    steps)))
 
 ;;Maps iteration count to color. The function returned will
 ;;return the color that is assosicated with the given number of steps to infinity 

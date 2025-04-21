@@ -23,16 +23,24 @@ Escape-time fractals are created by iterating a function on complex numbers and 
  function and @racket[c] is the point being tested.
 }
 
-@defproc[(point-in-set? [etf ETFractal] [point Complex])
+; point-in-set?: (-> ETFractal Complex Natural Natural Boolean)
+; Will determine if the given complex point is in the set of points of
+; the escape-time fractal.
+
+; steps-to-escape: (-> ETFractal Complex Natural Natural (Maybe Natural))
+; Will determine the number of steps to escape for some point on the
+; complex plane. Errors if the given point does not escape.
+
+@defproc[(point-in-set? [etf ETFractal] [point Complex] [max-iter Natural] [escape-bound Natural])
          Boolean]{
- Determines if the given complex point is in the set of points of
- the escape-time fractal.
+Determines if the given complex point is in the set of points of the escape-time fractal given the
+bound which defines the magnitude which is consider to be infinity.
 }
 
-@defproc[(steps-to-escape [etf ETFractal] [point Complex] [max-steps Natural])
+@defproc[(steps-to-escape [etf ETFractal] [point Complex] [max-iter Natural] [escape-bound Natural])
          (Maybe Natural)]{
- Determines the number of steps to escape for some point on the
- complex plane. Will return false if the point does not escape in the maximum number of steps given.
+Determines the number of steps to escape for some point on the complex plane. Will return
+false if the point does not escape in the maximum number of steps given.
 }
 
 @defproc[(render [etf ETFractal]

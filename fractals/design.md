@@ -16,11 +16,11 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; The bounds that the fractal will be generated upon. Used to limit the
 ; region for which escape-time fractals are calculated and rendered upon.
 
-; point-in-set? : (-> ETFractal Complex Boolean)
+; point-in-set?: (-> ETFractal Complex Natural Natural Boolean)
 ; Will determine if the given complex point is in the set of points of
 ; the escape-time fractal.
 
-; steps-to-escape : (-> ETFractal Complex Natural)
+; steps-to-escape: (-> ETFractal Complex Natural Natural (Maybe Natural))
 ; Will determine the number of steps to escape for some point on the
 ; complex plane. Errors if the given point does not escape.
 
