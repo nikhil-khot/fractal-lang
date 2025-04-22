@@ -187,18 +187,12 @@ the transformations and initial states are checked to ensure they were defined i
 @subsection{Creating a Koch Snowflake}
 
 @racketblock[
-(define koch-system
-  (([F: (draw 1 "blue")]
-     [+: (rotate 60)]
-     [-: (rotate -60)])
-    [F]
-    ([F-> F+F--F+F])))
-
 (define koch
-  (generate-ifractal koch-system))
+  (generate-ifractal [([F : (draw 1 "blue")]
+                       [+ : (turn 60)]
+                       [- : (turn -60)])
+                      [F]
+                      ([F -> F+F--F+F])]))
 
-(define iterated-koch
-  (iterate koch 4))
-
-(render iterated-koch 4 800 600)
+(render koch 7 800 600)
 ]

@@ -65,7 +65,7 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; there is an identifier that does not exist, then an error
 ; will be raised.
 
-; <Transformation> := [<id-> <State>]
+; <Transformation> := [<id> -> <State>]
 ; A transformation is some identifier to some new state. These 
 ; transformations update the state of the fractal and the state of the
 ; fractal determines its graphical representation. All transformations
@@ -114,14 +114,14 @@ Example escape-time fractal program to generate the mandelbrot set:
         #:window-width 600 #:window-height 600)
 ```
 
-Example iterative fractal program to approximate the Sierpinski triangle using an arrowhead curve:
+Example iterative fractal program to draw the Koch Snowflake using alternating red and black lines:
 ```lisp
-(define f (generate-ifractal [([A : (draw 1 "black")] [B : (draw 1 "black")]
-                               [+ : (turn 60)] [- : (turn -60)])
-                              [B-A-B]
-                              ([A -> B-A-B] [B -> A+B+A])]))
+(define koch (generate-ifractal [([F : (combine (draw 10 "black") (draw 10 "red"))]
+                               [+ : (turn 60)] [- : (turn -120)])
+                              [F-F-F]
+                              ([F -> F+F-F+F])]))
 
-(render sierpinski 2 500 500)
+(render koch 2 500 500)
 
-(render/interactive sierpinski 600 600)
+(render/interactive koch 600 600)
 ```

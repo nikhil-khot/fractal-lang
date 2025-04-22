@@ -12,21 +12,14 @@ Fractalang is a langauge allows users to easily represent and draw [fractals](ht
 
 Iterative Fractal
 ```scheme
-;; The Sierpinski Approximation
-(define sierpinski-fractal (generate-ifractal 
-            ;;Definitions
-            [([A : (draw 1 "black")]
-              [B : (draw 1 "black")]
-              [+ : (turn 60)]
-              [- : (turn -60)])
-            ;; Initial State
-            [B-A-B]
-            ;; Transformations       
-            ([A -> B-A-B]
-              [B -> A+B+A])]))
+;; The Koch Snowflake
+(define koch (generate-ifractal [([F : (combine (draw 10 "black") (draw 10 "red"))]
+                                  [+ : (turn 60)] [- : (turn -120)])
+                                 [F-F-F]
+                                 ([F -> F+F-F+F])]))
 
 ;; Draw your creation!
-(render/interactive sierpinski-fractal 600 600)
+(render/interactive koch 600 600)
 ```
 
 Escape Time Fractal
