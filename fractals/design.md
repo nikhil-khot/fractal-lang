@@ -78,6 +78,11 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; render : (-> IFractal Natural PosInt PosInt Pict)
 ; Will render the provided iterative fractal with the provided number of iterations applied
 ; and scaled to fit the provided window bounds
+
+; render/interactive : (-> IFractal PosInt PosInt Ifractal)
+; Will render the provided iterative fractal in a window of the specified size. Users
+; can iterate the fractal backwards and forwards with the left and right arrow keys,
+; and the current level of iteration will be displayed
 ```
 
 ## Milestones

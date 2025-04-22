@@ -33,8 +33,8 @@ Escape-time fractals are created by iterating a function on complex numbers and 
 
 @defproc[(point-in-set? [etf ETFractal] [point Complex] [max-iter Natural] [escape-bound Natural])
          Boolean]{
-Determines if the given complex point is in the set of points of the escape-time fractal given the
-bound which defines the magnitude which is consider to be infinity.
+ Determines if the given complex point is in the set of points of the escape-time fractal given the
+ bound which defines the magnitude which is consider to be infinity.
 }
 
 @defproc[(steps-to-escape [etf ETFractal] [point Complex] [max-iter Natural] [escape-bound Natural])
@@ -87,11 +87,32 @@ transformation, the default transformation simply preserves it
 within the State.
 
 @deftech{Binding} is defined as:
-@racketblock[[<id>: <command>]]
+@racketblock[[<id> : <command>]]
 
-A @racket[<command>] is one of or a composition of commands from a defined list of actions.
-Currently including: moving, drawing in color, rotating, doing nothing,
-saving current position and rotation, returning to saved position and rotation.
+A @racket[<command>] is one of or a composition of commands from the following defined list of actions:
+@defform[(draw distance color)]{
+ Draws the turtle forward in the specified color
+}
+@defform[(move distance)]{
+ Moves the turtle forward, without coloring
+}
+@defform[(turn degrees)]{
+ Turns the turtle the given angle clockwise
+}
+@defform[(save)]{
+ Saves the current position and angle of the turtle to the stack
+}
+@defform[(return)]{
+ Returns the turtle to the last saved position and angle from the stack
+}
+@defform[(none)]{
+ Returns the window, unchanged
+}
+@defform[(combine command ...+)]{
+ Executes the commands in order
+}
+
+
 
 @deftech{State} is defined as:
 @racketblock[
@@ -110,7 +131,7 @@ will be raised.
 
 @deftech{Transformation} is defined as:
 @racketblock[
-[<id> <State>]
+[<id> -> <State>]
 ]
 
 A transformation is some identifier to some new state. These
@@ -132,6 +153,21 @@ must be represented in terms of other bindings @racket[<id>]s.
  Renders the provided iterative fractal with the provided number of iterations applied
  and scaled to fit the provided window bounds.
 }
+
+@defproc[(render/interactive [ifr IFractal] 
+                [width PosInt]
+                [height PosInt])
+         IFractal]{
+ Renders the provided iterative fractal in a window of the specified size. Allows
+ users to iterate the fractal backwards and forwards with the left and right arrow keys,
+ and displays the current level of iteration.
+}
+
+@subsection{L-System Checks}
+
+In addition to the basic checks for proper form, L-System definitions are checked to ensure that
+ids are not used for multiple bindings or defined for multiple transformations. All ids used in
+the transformations and initial states are checked to ensure they were defined in the bindings.
 
 @section{Examples}
 
