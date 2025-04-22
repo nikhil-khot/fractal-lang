@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Fractalang is a langauge allows users to easily represent and draw fractals. The langauge supports both iterative(LINK) and escape time(LINK) fractals enabling users to explore math in a more approachable setting and to see their creations come to life. The interactive nature of the language was intentional so that users can explore the fractals they create.
+Fractalang is a langauge allows users to easily represent and draw [fractals](https://en.wikipedia.org/wiki/Fractal). The langauge supports both iterative and escape-time fractals enabling users to explore math in a more approachable setting and to see their creations come to life. The interactive nature of the language was intentional so that users can explore the fractals they create.
 
     Tell potential users why they might be interested in your DSL, i.e. a purpose statement for the DSL and description or links to relevant background information necessary to understand the domain.
 
@@ -57,4 +57,6 @@ See more examples in the respective folders under the "fractals" directory.
 
 ## Full Documentation
 
-The full documentation for this langauge can be found in the scribble page or in ```/fractals/design.md```
+The full documentation for this langauge can be found in the scribble page or in [here](/fractals/design.md)
+
+Developer docs can be found [here](/private/README.md)
