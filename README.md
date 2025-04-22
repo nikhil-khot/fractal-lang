@@ -57,6 +57,11 @@ Then import it into your project as
 ```
 ## Full Documentation
 
-The full documentation for this langauge can be found in the scribble page or in [here](/fractals/design.md)
+The full documentation for this langauge can be found in the scribble page by running the following command from the root directory,
+
+```
+scribble scribblings/main.scrbl
+```
+or in [here](/fractals/design.md)
 
 Developer docs can be found [here](/private/README.md)
