@@ -2,7 +2,6 @@
 (define name "Fractalang")
 (define deps '("base"
                "gui-lib"
-               "syntax-spec-v3"  
                "htdp-lib"
                "pict-lib"
                "rackunit-lib"

@@ -15,7 +15,7 @@
 ; Iterative Fractals
 
 (define-struct ifractal [bindings state transformations])
-; (ifractal [HashOf Bindings] (ListOf <State>) [HashOf <Transformation>] Boolean)
+; (ifractal [HashOf Bindings] (ListOf <State>) [HashOf <Transformation>])
 
 ; <L-System> := [(<Binding> ...+) [<State>] (<Transformation> ...)]
 (begin-for-syntax
@@ -39,7 +39,7 @@
                     ((~datum none))
                     ((~datum combine) c:command ...+)))))
 
-; generate-ifractal : (-> <L-System> <Space> IFractal)
+; generate-ifractal : (-> <L-System> IFractal)
 ; Creates an IFractal
 (define-syntax generate-ifractal
   (lambda (stx)
@@ -83,7 +83,7 @@
 ; Currently including: moving, drawing in color, rotating, doing nothing,
 ; saving current position and rotation, returning to saved position and rotation
 
-; parse-bindings: (-> <Binding> ...+ [HashOf Symbol [ListOf <command>]])
+; parse-bindings: (-> <Binding> ...+ [HashOf Symbol <command>])
 (define-syntax parse-bindings
   (lambda (stx)
     (syntax-parse stx
@@ -96,7 +96,7 @@
 (define-struct turtle-window [turtle stack])
 ; (turtle-window Turtle [ListOf [VectorOf Real Real Real]]) 
 
-; parse-commands: (-> <command> (-> TurtleWindow TurtleWindow)z)
+; parse-commands: (-> <command> (-> TurtleWindow TurtleWindow))
 (define-syntax parse-commands
   (lambda (stx)
     (syntax-parse stx
