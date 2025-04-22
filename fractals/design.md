@@ -12,7 +12,7 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; values (z and c, where z is the value of the last iteration of the
 ; function and c is the point being tested)
 
-; bounds: (Complex Complex)
+; Bounds := (Complex Complex)
 ; The bounds that the fractal will be generated upon. Used to limit the
 ; region for which escape-time fractals are calculated and rendered upon.
 
@@ -52,7 +52,7 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; transformation, the default transformation simply preserves it
 ; within the State.
 
-; <Binding> := [<id>: <command>]
+; <Binding> := [<id> : <command>]
 ; A <command> is one of or a composition of commands from a defined list of actions.
 ; Currently including: moving, drawing in color, rotating, doing nothing,
 ; saving current position and rotation, returning to saved position and rotation
