@@ -1,1 +1,1 @@
-("8.15" ta6le ("0581a08f82539ddc610dd644f54caa93e723ac5e" . "94847aaed26f896e46859e2ec1ecd5e798656fef") (collects #"fractal-lang" #"fractals" #"escapeTime" #"etfractal.rkt") (collects #"racket" #"main.rkt") (collects #"racket" #"runtime-config.rkt"))
+("8.15" ta6le ("0581a08f82539ddc610dd644f54caa93e723ac5e" . "4310c8e373975f498cb512ebf9db937285bfbac8") (collects #"fractal-lang" #"fractals" #"escapeTime" #"etfractal.rkt") (collects #"racket" #"main.rkt") (collects #"racket" #"runtime-config.rkt"))
