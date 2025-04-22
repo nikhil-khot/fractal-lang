@@ -8,7 +8,7 @@
 (require syntax/macro-testing)
 
 (provide generate-ifractal
-         render
+         render/pict
          iterate
          render/interactive)
          
@@ -255,7 +255,7 @@
 
 ; render : (-> IFractal Natural PosInt PosInt Pict)
 ; Renders the provided IFractal (iterated iters times) as a Pict
-(define (render ifractal iters height width)
+(define (render/pict ifractal iters height width)
   (let* ([frac (iterate ifractal iters)]
          [turtle (turtle-window (turtles width height) '())]
          [img (draw-state (ifractal-state frac) (ifractal-bindings frac) turtle)])
@@ -281,7 +281,7 @@
 ; Renders the fractal, shows the iteration number, and turns it into a bitmap for big-bang to use
 ; (-> IFractal PosInt PosInt PosInt Bitmap)
 (define (render-frac f iter width height)
-  (let ([img (render f 0 width height)])
+  (let ([img (render/pict f 0 width height)])
     (pict->bitmap
      (vc-append 20
                 (text (string-append "Iteration: " (number->string iter)) null (/ height 10))

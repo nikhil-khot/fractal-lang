@@ -75,7 +75,7 @@ Iterative fractals are any fractals that are created by repeatedly iterating a p
 ; Iterate will apply transformations on the current state of the fractal
 ; to create a new state. 
 
-; render : (-> IFractal Natural PosInt PosInt Pict)
+; render/pict : (-> IFractal Natural PosInt PosInt Pict)
 ; Will render the provided iterative fractal with the provided number of iterations applied
 ; and scaled to fit the provided window bounds
 
