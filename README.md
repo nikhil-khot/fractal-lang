@@ -3,9 +3,6 @@
 ## Purpose
 
 Fractalang is a langauge allows users to easily represent and draw [fractals](https://en.wikipedia.org/wiki/Fractal). The langauge supports both iterative and escape-time fractals enabling users to explore math in a more approachable setting and to see their creations come to life. The interactive nature of the language was intentional so that users can explore the fractals they create.
-
-    Tell potential users why they might be interested in your DSL, i.e. a purpose statement for the DSL and description or links to relevant background information necessary to understand the domain.
-
 ## Example
 
 
@@ -42,12 +39,20 @@ Escape Time Fractal
 
 See more examples in the respective folders under the "fractals" directory.
 
-    Whet their appetite with a small but compelling example. Point out how the benefits of your DSL show up in the example.
-
 ## Installation Guide
 
-...
+Change directory into the repository and run 
 
+
+```
+raco pkg install
+```
+
+Then import it into your project as 
+
+```
+(require Fractalang)
+```
 ## Full Documentation
 
 The full documentation for this langauge can be found in the scribble page or in [here](/fractals/design.md)
