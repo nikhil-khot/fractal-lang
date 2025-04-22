@@ -13,8 +13,8 @@
  steps-to-escape)
 
 ;;Represents the state of the rendering of the escape time fractal
-(define-struct world-state [image width height et-fractal max-iterations escape-bounds bounds pixels-computed total-pixels] #:mutable)
-;;A WorldState is a (make-world-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
+(define-struct render-state [image width height et-fractal max-iterations escape-bounds bounds pixels-computed total-pixels] #:mutable)
+;;A RenderState is a (make-render-state bitmap% Natural Natural ETFractal Natural (Tuple (Tuple Natural) (Tuple Natural)) Natural Natural)
 ;; and represent the state of the given escape time fractal
 ;; image - the state of the rendering of the fractal
 ;; width - The width of the window drawn to
@@ -41,19 +41,19 @@
                                     escape-bound)))
 
 ;;Finds the number of steps it takes to escape to infinity given some updater
-;;steps-to-inf: (-> Complex Complex Natural) Natural Natural WorldState
-(define (steps-to-inf et-fractal-update x y world)
+;;steps-to-inf: (-> Complex Complex Natural) Natural Natural RenderState
+(define (steps-to-inf et-fractal-update x y render-state)
   (letrec
-      ([width (world-state-width world)]
-       [height (world-state-height world)]
-       [h-bounds (first (world-state-bounds world))]
-       [v-bounds (second (world-state-bounds world))]
+      ([width (render-state-width render-state)]
+       [height (render-state-height render-state)]
+       [h-bounds (first (render-state-bounds render-state))]
+       [v-bounds (second (render-state-bounds render-state))]
        [x-lower (first h-bounds)]
        [x-upper (second h-bounds)]
        [y-lower (first v-bounds)]
        [y-upper (second v-bounds)]
-       [escape-bound (world-state-escape-bounds world)]
-       [max-iters (world-state-max-iterations world)]
+       [escape-bound (render-state-escape-bounds render-state)]
+       [max-iters (render-state-max-iterations render-state)]
        [complex-posn 
         (+ (* (/ x width) 
               (- x-upper x-lower))
@@ -62,8 +62,8 @@
                       (* (/ y height) 
                          (- y-upper y-lower)))))]
        [find-steps (λ (z iteration)
-                     (if (or (>= iteration (world-state-max-iterations world))
-                             (> (magnitude z) (world-state-escape-bounds world)))
+                     (if (or (>= iteration (render-state-max-iterations render-state))
+                             (> (magnitude z) (render-state-escape-bounds render-state)))
                          iteration
                          (find-steps (et-fractal-update z complex-posn) (add1 iteration))))])
     (num-steps complex-posn 0+0i 0 et-fractal-update max-iters escape-bound)
@@ -119,20 +119,20 @@
                         (min 255 (ceiling blue))))))))
 
 ;; Generates the image of the given fractal of the given state
-;;draw-fractal: (-> (-> Complex Complex Integer)) (-> Natural (-> Natural Color)) WorldState
-(define (draw-fractal etf-updater color-func world)
+;;draw-fractal: (-> (-> Complex Complex Integer)) (-> Natural (-> Natural Color)) RenderState
+(define (draw-fractal etf-updater color-func render-state)
   (letrec
-      ([width (world-state-width world)]
-       [height (world-state-width world)]
+      ([width (render-state-width render-state)]
+       [height (render-state-width render-state)]
        [bitmap (make-object bitmap% width height)]
-       [bytes (generate-pixels etf-updater color-func width height world)])
+       [bytes (generate-pixels etf-updater color-func width height render-state)])
     (send bitmap set-argb-pixels 0 0 width height bytes)
-    (set-world-state-image! world bitmap)
+    (set-render-state-image! render-state bitmap)
     bitmap))
 
 ;; Creates a loading screen bitmap with progress information
-;;create-loading-screen: Natural Natural WorldState -> bitmap%
-(define (create-loading-screen width height world)
+;;create-loading-screen: Natural Natural RenderState -> bitmap%
+(define (create-loading-screen width height render-state)
   (define bitmap (make-object bitmap% width height))
   (define dc (make-object bitmap-dc% bitmap))
   
@@ -140,14 +140,14 @@
   (send dc set-brush "black" 'solid)
   (send dc draw-rectangle 0 0 width height)
   
-  (draw-loading dc width height world)
+  (draw-loading dc width height render-state)
   bitmap)
 
 ;;Draws the loading screen to satisfy low attention spanned users
-;;draw-loading: bitmap-dc% Natural Natural WorldState -> Void
+;;draw-loading: bitmap-dc% Natural Natural RenderState -> Void
 (define (draw-loading dc width height state)
-  (let* ([pixels-computed (world-state-pixels-computed state)]
-         [total-pixels (world-state-total-pixels state)]
+  (let* ([pixels-computed (render-state-pixels-computed state)]
+         [total-pixels (render-state-total-pixels state)]
          [percentage (if (= total-pixels 0)
                          0
                          (floor (* 100 (/ pixels-computed total-pixels))))]
@@ -168,10 +168,10 @@
     (draw-progress-bar dc width height text-width text-height state)))
 
 ;;Draws the progress bar based on the number of pixels to be computed and the computed so far
-;;draw-progress-bar: bitmap-dc% Natural Natural Natural Natural WorldState -> Void
+;;draw-progress-bar: bitmap-dc% Natural Natural Natural Natural RenderState -> Void
 (define (draw-progress-bar dc width height text-width text-height state)
-  (let* ([pixels-computed (world-state-pixels-computed state)]
-         [total-pixels (world-state-total-pixels state)]
+  (let* ([pixels-computed (render-state-pixels-computed state)]
+         [total-pixels (render-state-total-pixels state)]
          [progress-width (max 10 (- width 100))]
          [progress-height 20]
          [progress-x (/ (- width progress-width) 2)]
@@ -195,23 +195,23 @@
 
 ;;Creates a color for each of the pixels in the fractal image
 ;;generate-pixels: (-> (-> Complex Complex Integer)) (-> Natural (-> Natural Color)) Natural
-;;                 Natural WorldState
-(define (generate-pixels etf-updater color-func width height world)
+;;                 Natural RenderState
+(define (generate-pixels etf-updater color-func width height render-state)
   (define bytes (make-bytes (* 4 width height)))
   
   ;;reset pixels-computed counter
-  (set-world-state-pixels-computed! world 0)
+  (set-render-state-pixels-computed! render-state 0)
   
   (for*/list ([x (range width)]
               [y (range height)])
     (let*
-        ([num-steps (steps-to-inf etf-updater x y world)]
+        ([num-steps (steps-to-inf etf-updater x y render-state)]
          [color (color-func num-steps)]
          [starting-idx (+ (* x 4) (* y 4 width))]
          [red (send color red)]
          [green (send color green)]
          [blue (send color blue)])
-      (set-world-state-pixels-computed! world (add1 (world-state-pixels-computed world)))
+      (set-render-state-pixels-computed! render-state (add1 (render-state-pixels-computed render-state)))
       
       ;;pixel color in the bytes array
       (bytes-set! bytes starting-idx 0)
@@ -226,19 +226,19 @@
   (make-et-fractal updater))
 
 ;;Will render the current state
-;;render-state: (-> Natural (-> Natural Color)) Image
-(define (render-state color-func world)
-  (let ([updater (et-fractal-updater (world-state-et-fractal world))]
-        [max-iters (world-state-max-iterations world)])
+;;render-fractal: (-> Natural (-> Natural Color)) Image
+(define (render-fractal color-func render-state)
+  (let ([updater (et-fractal-updater (render-state-et-fractal render-state))]
+        [max-iters (render-state-max-iterations render-state)])
     (draw-fractal updater
                   (color-func max-iters)
-                  world)))
+                  render-state)))
 
-;;Creates a new frame from the given color function and world state
+;;Creates a new frame from the given color function and render state
 ;; create-frame : (-> Natural (-> Natural Color)) Frame%)
-(define (create-frame color world)
-  (let* ([width (world-state-width world)]
-         [height (world-state-height world)]
+(define (create-frame color render-state)
+  (let* ([width (render-state-width render-state)]
+         [height (render-state-height render-state)]
          [title "Fractalang"]
          
          [display-frame (new frame%
@@ -246,15 +246,15 @@
                              [width width]
                              [height height])]
          [is-calculating? #t]
-         [loading-bitmap (create-loading-screen width height world)]
+         [loading-bitmap (create-loading-screen width height render-state)]
          
          [paint-callback (lambda (canvas dc)
                            (if is-calculating?
                                ;; Show loading screen while calculating
                                (begin
-                                 (set! loading-bitmap (create-loading-screen width height world))
+                                 (set! loading-bitmap (create-loading-screen width height render-state))
                                  (send dc draw-bitmap loading-bitmap 0 0))
-                               (send dc draw-bitmap (world-state-image world) 0 0)))]
+                               (send dc draw-bitmap (render-state-image render-state) 0 0)))]
          [display-canvas
           (new canvas%
                [parent display-frame]
@@ -274,7 +274,7 @@
     ;;separate thread to compute the fractal
     (thread
      (lambda ()
-       (define img (render-state color world))
+       (define img (render-fractal color render-state))
        
        (set! is-calculating? #f)
        (send refresh-timer stop)
@@ -295,7 +295,7 @@
                   (error 'render "~a must be a complex number, got: ~v" name val)))
               (list x-lower x-upper y-lower y-upper)
               '("x-lower" "x-upper" "y-lower" "y-upper"))
-    (create-frame color-func (make-world-state
+    (create-frame color-func (make-render-state
                               (make-object bitmap% width height)
                               width height etf max-iter escape-bounds
                               (list (list x-lower x-upper)
