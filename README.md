@@ -45,6 +45,8 @@ Change directory into the repository and run
 
 
 ```
+git clone (https://github.com/nikhil-khot/fractal-lang)[https://github.com/nikhil-khot/fractal-lang]
+cd fractal-lang/
 raco pkg install
 ```
 
